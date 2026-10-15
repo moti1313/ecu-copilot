@@ -1,0 +1,71 @@
+{
+  "_comment": "Bill of materials excerpt for DCU-A1 / DCU-B2 with lifecycle status. Looked up by the copilot's lookup_part tool.",
+  "parts": [
+    {
+      "part_number": "XM32F7-512-LQ64-G1",
+      "position": "U1",
+      "description": "32-bit automotive microcontroller, 512 kB flash, LQFP-64, AEC-Q100 Grade 1",
+      "supplier": "Supplier M",
+      "used_in": ["DCU-A1", "DCU-B2"],
+      "status": "active",
+      "datasheet": "DS-MCU-XM32F7",
+      "alternatives": [],
+      "notes": "Grade 2 variant (-G2) is NOT released for DCU (ambient up to 125 °C required at door module)."
+    },
+    {
+      "part_number": "HB4821-QHTS28",
+      "position": "U7",
+      "description": "H-bridge motor driver 5 A continuous, HTSSOP-28, AEC-Q100 Grade 1",
+      "supplier": "Supplier H",
+      "used_in": ["DCU-A1", "DCU-B2"],
+      "status": "end_of_life",
+      "pcn": "PCN-2026-017",
+      "last_time_buy": "2027-03-31",
+      "datasheet": "DS-DRV-HB4821",
+      "alternatives": ["HB4830-QHTS28"],
+      "notes": "Pin-compatible successor HB4830; qualification target 2026-12-15; LTB bridge quantity approx. 1.1 million."
+    },
+    {
+      "part_number": "HB4830-QHTS28",
+      "position": "U7 (alternative)",
+      "description": "H-bridge motor driver 5 A continuous, HTSSOP-28, AEC-Q100 Grade 1, 130 nm BCD",
+      "supplier": "Supplier H",
+      "used_in": ["DCU-A1", "DCU-B2"],
+      "status": "qualification_in_progress",
+      "pcn": "PCN-2026-017",
+      "datasheet": "DS-DRV-HB4821",
+      "alternatives": ["HB4821-QHTS28"],
+      "notes": "Lower over-current threshold (7.0 A vs 7.5 A) – software stall detection must be verified."
+    },
+    {
+      "part_number": "LIN-TRX-TJA1x",
+      "position": "U3",
+      "description": "LIN 2.2A transceiver, SOIC-8",
+      "supplier": "Supplier N",
+      "used_in": ["DCU-A1", "DCU-B2"],
+      "status": "active",
+      "alternatives": ["LIN-TRX-ATA66"],
+      "notes": ""
+    },
+    {
+      "part_number": "CON-J3-12P-PF",
+      "position": "J3",
+      "description": "12-pin press-fit vehicle connector, pins 5/6 = LIN, pins 1/2 = supply",
+      "supplier": "Supplier C",
+      "used_in": ["DCU-A1", "DCU-B2"],
+      "status": "active",
+      "alternatives": [],
+      "notes": "Pin length tolerance critical for press-fit; see FMEA-DCU-B2 item 7. Incoming inspection: pin length sampling per lot."
+    },
+    {
+      "part_number": "ANT-FE-KE2",
+      "position": "U12",
+      "description": "Keyless-entry LF antenna front-end (variant B only)",
+      "supplier": "Supplier K",
+      "used_in": ["DCU-B2"],
+      "status": "active",
+      "alternatives": [],
+      "notes": "Periodic polling in sleep mode adds approx. 90 µA to quiescent current of DCU-B2."
+    }
+  ]
+}

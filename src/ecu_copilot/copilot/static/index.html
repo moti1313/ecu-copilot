@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ECU Copilot</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root { --bg:#f6f7f9; --card:#fff; --ink:#1b1f24; --muted:#5b6470; --line:#e3e6ea; --accent:#0b5fff; --fail:#d6453d; --ok:#1e9e5a; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#121417; --card:#1b1f24; --ink:#e8eaed; --muted:#9aa3ad; --line:#2a3038; } }
+  * { box-sizing:border-box } body { margin:0; font:14px/1.45 system-ui, sans-serif; background:var(--bg); color:var(--ink) }
+  header { padding:14px 20px; border-bottom:1px solid var(--line); display:flex; gap:16px; align-items:baseline; flex-wrap:wrap }
+  header h1 { font-size:18px; margin:0 } header .sub { color:var(--muted) } header a { color:var(--accent) }
+  main { display:grid; grid-template-columns: 1fr 1fr; gap:16px; padding:16px 20px; }
+  @media (max-width: 960px) { main { grid-template-columns: 1fr } }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px 16px; }
+  .card h2 { font-size:14px; margin:0 0 10px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em }
+  .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center }
+  button { border:1px solid var(--line); background:var(--card); color:var(--ink); border-radius:8px; padding:7px 11px; cursor:pointer; font:inherit }
+  button:hover { border-color:var(--accent) } button.primary { background:var(--accent); color:#fff; border-color:var(--accent) }
+  button.danger { color:var(--fail) }
+  textarea { width:100%; min-height:64px; border:1px solid var(--line); border-radius:8px; padding:10px; font:inherit; background:var(--bg); color:var(--ink); resize:vertical }
+  table { width:100%; border-collapse:collapse; font-size:13px } th, td { text-align:left; padding:5px 6px; border-bottom:1px solid var(--line) } th { color:var(--muted); font-weight:600 }
+  td.num { text-align:right; font-variant-numeric:tabular-nums }
+  .rate-hi { color:var(--fail); font-weight:600 } .rate-ok { color:var(--ok) }
+  .answer { white-space:pre-wrap; line-height:1.5 } .answer:empty::before { content:"Stell eine Frage – z. B. „Warum fällt Variante B an Station 2 seit 10 Minuten durch?“"; color:var(--muted) }
+  .tool { border-left:3px solid var(--accent); padding:6px 10px; margin:6px 0; background:var(--bg); border-radius:6px; font-size:12.5px }
+  .tool code { color:var(--muted) } .tool pre { margin:4px 0 0; white-space:pre-wrap; color:var(--muted); max-height:90px; overflow:auto }
+  .kpis { display:grid; grid-template-columns: repeat(auto-fit, minmax(110px,1fr)); gap:8px } .kpi { background:var(--bg); border-radius:8px; padding:8px 10px }
+  .kpi b { display:block; font-size:18px } .kpi span { color:var(--muted); font-size:12px }
+  .status { font-size:12px; color:var(--muted) } .busy { opacity:.6 } .warn { color:var(--fail) }
+  .faults span { display:inline-block; background:var(--bg); border:1px solid var(--line); border-radius:999px; padding:2px 10px; margin:2px 4px 2px 0; font-size:12px }
+</style>
+</head>
+<body>
+<header>
+  <h1>ECU Copilot</h1>
+  <span class="sub">EOL-Prüfline DCU-A1 / DCU-B2 · Digital Twin + Agent</span>
+  <span class="sub" id="cfg"></span>
+  <a id="jaeger" href="#" target="_blank" rel="noopener">Traces (Jaeger) ↗</a>
+</header>
+<main>
+  <section class="card">
+    <h2>Prüfstände – Ausfallrate, letzte 10 Minuten (live)</h2>
+    <canvas id="chart" height="150"></canvas>
+    <table id="stats"><thead><tr><th>Station</th><th>Var.</th><th class="num">geprüft</th><th class="num">Ausfall %</th><th>Codes</th><th class="num">T °C</th><th class="num">Lärm dB</th><th class="num">I_q µA</th></tr></thead><tbody></tbody></table>
+    <div class="row" style="margin-top:10px">
+      <span class="status">Störung injizieren:</span>
+      <button onclick="fault({type:'temperature_drift',station:2,delta_c:10,ramp_s:60})">Temperaturdrift St. 2</button>
+      <button onclick="fault({type:'acoustic_noise',station:3,noise_db:57})">Hallenlärm St. 3</button>
+      <button onclick="fault({type:'bad_lot',variant:'B',lot:'L2439-07',fail_rate:0.15})">Schlechtes Los (LIN)</button>
+      <button class="danger" onclick="clearFaults()">Alle Störungen aufheben</button>
+    </div>
+    <div class="faults status" id="faults" style="margin-top:8px"></div>
+  </section>
+
+  <section class="card">
+    <h2>Frage an den Copilot</h2>
+    <textarea id="q">Warum fällt Variante B an Station 2 seit 10 Minuten überdurchschnittlich oft durch? Ist das ein echter Fehler oder ein Pseudo-Fehler?</textarea>
+    <div class="row" style="margin-top:8px">
+      <button class="primary" id="askBtn" onclick="ask()">Fragen</button>
+      <button onclick="setQ('Welche Ruhestrom-Grenze gilt für Variante B und bei welcher Temperatur ist die Messung gültig?')">Beispiel: Spezifikation</button>
+      <button onclick="setQ('Der Treiber-IC auf U7 soll abgekündigt sein. Was ist der Ersatz, bis wann muss bestellt werden, und was muss die Software prüfen?')">Beispiel: Abkündigung</button>
+      <button onclick="setQ('Erstelle einen 8D-Report-Entwurf für die aktuelle Auffälligkeit an Station 2.')">Beispiel: 8D</button>
+      <span class="status" id="askStatus"></span>
+    </div>
+    <div class="answer" id="answer" style="margin-top:12px"></div>
+    <div id="tools" style="margin-top:10px"></div>
+    <div class="status" id="meta" style="margin-top:8px"></div>
+  </section>
+
+  <section class="card" style="grid-column: 1 / -1">
+    <h2>Betrieb – Kosten, Latenz, Qualität (alle Fragen dieses Service)</h2>
+    <div class="kpis" id="kpis"></div>
+    <table id="recent" style="margin-top:10px"><thead><tr><th>Zeit</th><th>Frage</th><th>Tools</th><th class="num">Iter.</th><th class="num">Tokens in/out</th><th class="num">Cache</th><th class="num">$</th><th class="num">s</th><th>Hinweis</th></tr></thead><tbody></tbody></table>
+  </section>
+</main>
+<script>
+let CFG = {twin_url: 'http://localhost:8001', jaeger_url: 'http://localhost:16686'};
+const series = {}; // "2/B" -> [{x,y}]
+const colors = {'1/A':'#0b5fff','2/A':'#5b8def','2/B':'#d6453d','3/B':'#e08a2e'};
+let chart;
+
+async function init() {
+  try { CFG = await (await fetch('/config')).json(); } catch {}
+  document.getElementById('cfg').textContent = `Modell ${CFG.model} · RAG ${CFG.rag_mode}`;
+  document.getElementById('jaeger').href = CFG.jaeger_url + '/search?service=ecu-copilot';
+  chart = new Chart(document.getElementById('chart'), {
+    type: 'line', data: { datasets: [] },
+    options: { animation: false, responsive: true, scales: { x: { type: 'linear', ticks: { callback: v => new Date(v).toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit', second:'2-digit'}) } }, y: { min: 0, title: { display: true, text: 'Ausfallrate % (10-min-Fenster)' } } }, plugins: { legend: { position: 'bottom' } } }
+  });
+  poll(); setInterval(poll, 3000); refreshMetrics(); setInterval(refreshMetrics, 10000);
+}
+
+async function poll() {
+  try {
+    const s = await (await fetch(`${CFG.twin_url}/stats?minutes=10`)).json();
+    const now = Date.now();
+    const tb = document.querySelector('#stats tbody'); tb.innerHTML = '';
+    for (const g of s.groups) {
+      const key = `${g.station}/${g.variant}`;
+      (series[key] ||= []).push({x: now, y: g.failure_rate_pct});
+      if (series[key].length > 200) series[key].shift();
+      const codes = Object.entries(g.failure_codes).map(([c,n]) => `${c}:${n}`).join(' ');
+      const cls = g.failure_rate_pct >= 5 ? 'rate-hi' : 'rate-ok';
+      tb.insertAdjacentHTML('beforeend', `<tr><td>EOL-${g.station}</td><td>${g.variant}</td><td class="num">${g.tested}</td><td class="num ${cls}">${g.failure_rate_pct.toFixed(1)}</td><td>${codes||'–'}</td><td class="num ${g.mean_board_temp_c>32?'warn':''}">${g.mean_board_temp_c}</td><td class="num ${g.mean_ambient_noise_db>45?'warn':''}">${g.mean_ambient_noise_db}</td><td class="num">${g.mean_quiescent_current_ua}</td></tr>`);
+    }
+    chart.data.datasets = Object.keys(series).sort().map(k => ({label: `EOL-${k.replace('/', ' Var. ')}`, data: series[k], borderColor: colors[k] || '#888', borderWidth: 2, pointRadius: 0, tension: .25}));
+    chart.update();
+    const f = await (await fetch(`${CFG.twin_url}/faults`)).json();
+    document.getElementById('faults').innerHTML = f.length ? 'Aktive Störungen: ' + f.map(a => `<span>#${a.id} ${a.fault.type} ${a.fault.station ? 'St. '+a.fault.station : a.fault.lot}</span>`).join('') : 'Keine aktive Störung.';
+  } catch (e) { document.getElementById('faults').textContent = 'Twin nicht erreichbar: ' + e; }
+}
+
+async function fault(body) { await fetch(`${CFG.twin_url}/faults`, {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(body)}); poll(); }
+async function clearFaults() { await fetch(`${CFG.twin_url}/faults`, {method:'DELETE'}); poll(); }
+function setQ(t) { document.getElementById('q').value = t; }
+
+async function ask() {
+  const q = document.getElementById('q').value.trim(); if (!q) return;
+  const btn = document.getElementById('askBtn'); btn.disabled = true; btn.classList.add('busy');
+  document.getElementById('askStatus').textContent = 'Agent arbeitet … (Tools laufen, bitte warten)';
+  document.getElementById('answer').textContent = ''; document.getElementById('tools').innerHTML = ''; document.getElementById('meta').textContent = '';
+  try {
+    const r = await (await fetch('/ask', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({question: q})})).json();
+    document.getElementById('answer').textContent = r.answer || ('Fehler: ' + r.error);
+    document.getElementById('tools').innerHTML = r.tool_calls.map((t, i) => `<div class="tool"><b>${i+1}. ${t.name}</b> <code>${esc(JSON.stringify(t.input))}</code><pre>${esc(t.result_preview)}</pre></div>`).join('');
+    const u = r.usage || {};
+    document.getElementById('meta').innerHTML = `${r.iterations} Modell-Aufrufe · ${r.tool_calls.length} Tool-Aufrufe · Tokens ${u.input_tokens}/${u.output_tokens} (Cache gelesen ${u.cache_read_input_tokens}) · <b>${(r.cost_usd||0).toFixed(4)} $</b> · ${r.latency_s} s` + (r.citation_missing ? ' · <span class="warn">⚠ Guardrail: keine Quellenangabe</span>' : '') + (r.trace_id ? ` · <a href="${CFG.jaeger_url}/trace/${r.trace_id}" target="_blank" rel="noopener">Trace ↗</a>` : '');
+  } catch (e) { document.getElementById('answer').textContent = 'Fehler: ' + e; }
+  btn.disabled = false; btn.classList.remove('busy'); document.getElementById('askStatus').textContent = ''; refreshMetrics();
+}
+
+async function refreshMetrics() {
+  try {
+    const m = await (await fetch('/metrics')).json();
+    const k = document.getElementById('kpis');
+    if (!m.questions) { k.innerHTML = '<span class="status">Noch keine Fragen.</span>'; return; }
+    k.innerHTML = [['Fragen', m.questions], ['Kosten gesamt', m.total_cost_usd.toFixed(3)+' $'], ['Ø Kosten', m.avg_cost_usd.toFixed(4)+' $'], ['Ø Latenz', m.avg_latency_s+' s'], ['p95 Latenz', m.p95_latency_s+' s'], ['Cache-Trefferquote', Math.round(m.cache_hit_ratio*100)+' %'], ['Ø Modell-Aufrufe', m.avg_iterations], ['Ohne Quelle', m.citation_missing], ['Fehler', m.errors]].map(([l,v]) => `<div class="kpi"><b>${v}</b><span>${l}</span></div>`).join('');
+    const rows = await (await fetch('/metrics/recent?n=12')).json();
+    document.querySelector('#recent tbody').innerHTML = rows.map(r => `<tr><td>${r.timestamp.slice(11,19)}</td><td>${esc(r.question.slice(0,70))}</td><td>${r.tools.join(', ')}</td><td class="num">${r.iterations}</td><td class="num">${r.usage.input_tokens}/${r.usage.output_tokens}</td><td class="num">${r.usage.cache_read_input_tokens}</td><td class="num">${r.cost_usd.toFixed(4)}</td><td class="num">${r.latency_s}</td><td class="warn">${r.error||''}${r.citation_missing?' keine Quelle':''}</td></tr>`).join('');
+  } catch {}
+}
+function esc(s) { return String(s ?? '').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+init();
+</script>
+</body>
+</html>

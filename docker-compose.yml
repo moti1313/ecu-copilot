@@ -1,0 +1,40 @@
+services:
+  jaeger:
+    image: jaegertracing/all-in-one:1.62.0
+    ports:
+      - "16686:16686"   # UI
+      - "4318:4318"     # OTLP/HTTP in
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+
+  twin:
+    build: .
+    command: uvicorn ecu_copilot.twin.api:app --host 0.0.0.0 --port 8001
+    environment:
+      PORT: "8001"
+      TWIN_INTERVAL_S: "1.5"
+      TWIN_SEED_MINUTES: "30"
+    ports:
+      - "8001:8001"
+
+  copilot:
+    build: .
+    depends_on:
+      - twin
+      - jaeger
+    environment:
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}   # from .env; without it the service starts but /ask returns an auth error
+      AGENT_MODEL: ${AGENT_MODEL:-claude-opus-5-5}
+      TWIN_URL: http://twin:8001
+      TWIN_PUBLIC_URL: http://localhost:8001
+      JAEGER_UI_URL: http://localhost:16686
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
+      ANTHROPIC_OPEN_TELEMETRY_TRACES_CONTENT_MODE: content   # prompts/answers visible in Jaeger (local demo only)
+      RAG_MODE: hybrid
+    volumes:
+      - copilot-data:/data   # embedding model cache, chroma index, metrics, 8D reports
+    ports:
+      - "8000:8000"
+
+volumes:
+  copilot-data:

@@ -76,9 +76,7 @@ def run(question: str) -> str:
                 else:
                     output = json.dumps({"error": f"unknown tool {block.name}"})
                 print(f"[tool result] {output}")
-                results.append(
-                    {"type": "tool_result", "tool_use_id": block.id, "content": output}
-                )
+                results.append({"type": "tool_result", "tool_use_id": block.id, "content": output})
         messages.append({"role": "user", "content": results})
 
     answer = "".join(b.text for b in response.content if b.type == "text")

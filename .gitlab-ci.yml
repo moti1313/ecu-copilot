@@ -1,0 +1,43 @@
+# lint -> test on every push; evals on demand (they cost money and need the API key).
+image: ghcr.io/astral-sh/uv:0.13.1-python3.12-bookworm-slim
+
+variables:
+  UV_CACHE_DIR: .uv-cache
+  RAG_MODE: bm25          # no model download in CI
+
+cache:
+  key: uv-$CI_COMMIT_REF_SLUG
+  paths: [.uv-cache]
+
+stages: [lint, test, eval]
+
+lint:
+  stage: lint
+  script:
+    - uv sync --frozen
+    - uv run ruff check .
+    - uv run ruff format --check .
+
+test:
+  stage: test
+  script:
+    - uv sync --frozen
+    - uv run pytest --junitxml=report.xml
+  artifacts:
+    reports:
+      junit: report.xml
+
+eval:
+  stage: eval
+  when: manual            # click to run; needs ANTHROPIC_API_KEY as masked CI variable
+  variables:
+    RAG_MODE: hybrid
+    EVAL_MIN_PASS: "0.8"
+  script:
+    - uv sync --frozen
+    - uv run python -m ecu_copilot.rag.ingest
+    - uv run uvicorn ecu_copilot.twin.api:app --port 8001 & sleep 5
+    - uv run python evals/run.py
+  artifacts:
+    when: always
+    paths: [data/evals/]

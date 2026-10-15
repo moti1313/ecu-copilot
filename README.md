@@ -1,0 +1,119 @@
+# ECU Copilot
+
+An AI agent for test engineers on an electronics end-of-line (EOL) line, built as a prototype for a
+production-grade LLM feature: **agent + tools + RAG**, with **tracing, cost accounting, guardrails and evals**
+from day one. It runs against a **digital twin** of three EOL test stations for door control units
+(DCU-A1 / DCU-B2), so the whole thing works on a laptop with `docker compose up`.
+
+> **The story.** A test engineer sees that variant B started failing at station 2 ten minutes ago.
+> Today: pull logs, search the test specification, ask a colleague, type an 8D report - two hours.
+> With the copilot: one question. The agent reads the live data, compares it with the specification,
+> recognises pseudo failures caused by temperature drift, and drafts the 8D report - with citations.
+> And the monitoring shows what it cost and whether the answer was grounded.
+
+## Architecture
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│  Browser: dashboard (live failure rates · fault injection · chat ·   │
+│           tool trace · cost/latency KPIs)                            │
+└───────────────┬─────────────────────────────────┬────────────────────┘
+                │ REST                            │ REST
+┌───────────────▼───────────────┐   ┌─────────────▼──────────────────┐
+│  twin  (FastAPI, :8001)       │   │  copilot  (FastAPI, :8000)     │
+│  digital twin of 3 EOL        │◄──│  Claude + SDK tool runner      │
+│  stations, 2 variants         │   │  tools: search_docs (RAG)      │
+│  · measurements, verdicts     │   │         get_station_stats      │
+│  · fault injection: drift,    │   │         get_recent_results     │
+│    hall noise, bad lot        │   │         lookup_part (BOM/PCN)  │
+│  · SSE event stream           │   │         draft_8d_report        │
+└───────────────────────────────┘   │  guardrails · cost log · evals │
+                                    └─────────────┬──────────────────┘
+┌───────────────────────────────┐                 │ OpenTelemetry (OTLP)
+│  docs/  test spec, datasheets,│   ┌─────────────▼──────────────────┐
+│  FMEA, PCN, work instruction  │   │  jaeger  (:16686)              │
+│  → chunks → local embeddings  │   └────────────────────────────────┘
+│  → ChromaDB + BM25 (hybrid)   │
+└───────────────────────────────┘
+```
+
+| Concern | Choice | Why |
+|---|---|---|
+| Agent loop | Anthropic SDK tool runner (`@beta_tool`) | ~40 lines, every line explainable; no framework between us and the API. The same loop written by hand is in `examples/hello_agent.py`. |
+| Model | `claude-opus-5-5` (agent), `claude-haiku-5-5` (eval judge) | adaptive thinking, strict tool schemas, prompt caching; a cheap judge for evals |
+| RAG | fastembed (multilingual MiniLM) + ChromaDB, fused with BM25 via RRF | embeddings for meaning (German questions over English docs), BM25 for exact tokens like `E-204`, `HB4821`; nothing leaves the machine except the question and the retrieved chunks |
+| Twin | FastAPI, in-memory, seeded RNG | deterministic enough to test, realistic enough to tell the story; replaceable by a real MES/test system behind the same REST contract |
+| Observability | OpenTelemetry → Jaeger; per-question JSONL metrics | the SDK emits spans on its own; one container for the UI; cost/latency/cache/citation KPIs without a SaaS |
+| Quality | pytest (no API key) + golden-set evals (tools → facts → LLM judge) | regressions in prompt or model are caught by a number, not by a feeling |
+
+## Quick start
+
+```bash
+cp .env.example .env            # put your ANTHROPIC_API_KEY in .env
+docker compose up --build       # first start downloads the embedding model (~250 MB) into a volume
+```
+
+- Dashboard: http://localhost:8000 · twin API docs: http://localhost:8001/docs · traces: http://localhost:16686
+
+Local development without Docker:
+
+```bash
+uv sync
+uv run python -m ecu_copilot.rag.ingest                      # build the document index
+uv run uvicorn ecu_copilot.twin.api:app --port 8001          # terminal 1
+uv run uvicorn ecu_copilot.copilot.api:app --port 8000       # terminal 2 (needs ANTHROPIC_API_KEY)
+```
+
+Try it: click **Temperaturdrift St. 2**, wait a minute, ask
+*"Warum fällt Variante B an Station 2 seit 10 Minuten überdurchschnittlich oft durch?"*
+
+## Tests and evals
+
+```bash
+uv run ruff check . && uv run ruff format --check .
+uv run pytest                        # 25 tests, no API key, no model download (RAG_MODE=bm25 in CI)
+uv run python evals/run.py           # golden set against the live agent; needs twin running + API key
+uv run python evals/run.py --only live-drift-pseudo-failure --no-judge
+```
+
+The eval has three layers per case - expected tools called (deterministic), key facts present
+(deterministic), rubric satisfied (LLM-as-judge). It exits non-zero below `EVAL_MIN_PASS` (0.8),
+which is the gate in the manual `eval` job of `.gitlab-ci.yml` / GitHub Actions.
+
+## How the demo scenario works
+
+1. The station firmware checks limits from the test specification, but **not** the spec's environmental
+   validity rule (TS-DCU-EOL §4.2: results outside 18-32 °C are INVALID, not FAIL). That gap exists in the
+   twin on purpose - it mirrors a real Rev. D note in the spec.
+2. Quiescent current rises with temperature (~3 %/K). Variant B sits closer to its limit (330 µA typical
+   vs 450 µA limit) than variant A (240 vs 350), so drift hits B first.
+3. The agent sees E-204 rising on station 2 / variant B, reads the mean temperature (>32 °C), finds §4.2
+   and FMEA item 11, and concludes *pseudo failure: fix the station, re-test, do not block units*.
+
+Two more faults are built in: hall noise (E-310 above 45 dB(A), spec §6.1) and a bad connector lot
+(E-120 clustered on lot L2439-07, FMEA item 7) - a *real* failure the agent must not explain away.
+
+## Production notes (what would change at a real site)
+
+- **Data sources:** the twin becomes an adapter to the MES / test-station database; the five tools keep their
+  schema. Events would come from Kafka instead of SSE.
+- **Deployment:** the compose file maps 1:1 to two Deployments, a Service each, a Secret for the key and an
+  OTLP collector; the embedding model lives in an image layer or a PVC.
+- **Model access:** `AnthropicBedrockMantle` swaps in for `Anthropic()` on AWS; nothing else changes.
+- **Guardrails:** the citation check is a minimum. Next: a topic classifier on input, schema-validated
+  answers for the 8D path, and sampling of answers into the eval set from the metrics log.
+- **Prompt caching:** the system prompt is cached (`cache_control`), the dashboard shows the cache hit ratio.
+
+## Repository layout
+
+```
+src/ecu_copilot/
+  config.py            environment-driven settings, pricing table
+  twin/                models.py (API contract) · simulator.py (the generator) · api.py (FastAPI)
+  rag/                 chunking.py · index.py (Chroma + BM25, RRF) · ingest.py (CLI)
+  copilot/             tools.py · agent.py · api.py · telemetry.py · metrics.py · static/index.html
+docs/                  six engineering documents (synthetic, consistent limits) + BOM-DCU.json
+evals/                 golden.json · run.py
+tests/                 25 tests, fake LLM client
+examples/hello_agent.py   the agent loop written by hand (day-1 version)
+```

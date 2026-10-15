@@ -1,0 +1,98 @@
+{
+  "_comment": "Golden set for the ECU Copilot. Each case: setup (faults to inject on the twin), expected tools (must all be called), facts (each entry is a list of accepted spellings; one per entry must appear in the answer), forbidden (must not appear), rubric (for the LLM judge).",
+  "cases": [
+    {
+      "id": "spec-quiescent-limit-b",
+      "question": "Welche Ruhestrom-Grenze gilt für Variante B?",
+      "setup": [],
+      "expected_tools": ["search_docs"],
+      "facts": [["450"], ["TS-DCU-EOL"]],
+      "forbidden": ["350 µA für Variante B"],
+      "rubric": "States 450 µA as the limit for variant B (DCU-B2) with a citation of TS-DCU-EOL."
+    },
+    {
+      "id": "spec-temperature-window",
+      "question": "In welchem Temperaturbereich ist die Ruhestrommessung gültig, und was passiert außerhalb?",
+      "setup": [],
+      "expected_tools": ["search_docs"],
+      "facts": [["18"], ["32"], ["INVALID", "ungültig", "invalid"], ["4.2"]],
+      "forbidden": [],
+      "rubric": "States the 18-32 °C window, that results outside are INVALID (not FAIL) and are to be re-tested, citing TS-DCU-EOL §4.2."
+    },
+    {
+      "id": "spec-failure-code-e310",
+      "question": "What does failure code E-310 mean and what should I check first?",
+      "setup": [],
+      "expected_tools": ["search_docs"],
+      "facts": [["acoustic", "Acoustic"], ["45 dB", "45 dB(A)", "45 dB(A)"], ["70"]],
+      "forbidden": [],
+      "rubric": "Explains E-310 = acoustic score below 70 and that the first check is the cell background noise (limit 45 dB(A)), with citations."
+    },
+    {
+      "id": "leakage-physics",
+      "question": "Warum steigt der Ruhestrom des Steuergeräts mit der Temperatur, und wie stark pro Kelvin?",
+      "setup": [],
+      "expected_tools": ["search_docs"],
+      "facts": [["3.5", "3,5"], ["Leckstrom", "leakage", "Leakage"], ["DS-MCU-XM32F7"]],
+      "forbidden": [],
+      "rubric": "Explains transistor leakage rising exponentially with temperature, approx. 3.5 % per kelvin (doubling roughly every 20 K), citing DS-MCU-XM32F7 §7.3."
+    },
+    {
+      "id": "pcn-driver-eol",
+      "question": "Der Treiber-IC auf U7 soll abgekündigt sein. Was ist der Ersatz, bis wann muss bestellt werden, und was muss die Software prüfen?",
+      "setup": [],
+      "expected_tools": ["lookup_part", "search_docs"],
+      "facts": [["HB4830"], ["2027-03-31", "31.03.2027", "31. März 2027", "March 31, 2027", "31 March 2027"], ["7.0 A", "7,0 A", "7 A"]],
+      "forbidden": [],
+      "rubric": "Names HB4830 as pin-compatible successor, the last-time-buy deadline 2027-03-31, and that software must verify the stall-detection / over-current threshold (7.0 A vs 7.5 A). Cites PCN-2026-017."
+    },
+    {
+      "id": "live-drift-pseudo-failure",
+      "question": "Warum fällt Variante B an Station 2 seit 10 Minuten überdurchschnittlich oft durch? Ist das ein echter Fehler oder ein Pseudo-Fehler?",
+      "setup": [{"type": "temperature_drift", "station": 2, "delta_c": 10, "ramp_s": 0}],
+      "settle_seconds": 90,
+      "expected_tools": ["get_station_stats", "search_docs"],
+      "facts": [["E-204"], ["Pseudo", "pseudo"], ["32"], ["4.2"]],
+      "forbidden": ["sperren Sie alle", "block all units"],
+      "rubric": "Identifies E-204 as dominant code, links it to the station temperature above the 32 °C validity window (TS-DCU-EOL §4.2 / FMEA item 11), concludes pseudo failure (environment, not units), recommends correcting the station condition and re-testing instead of blocking units, and explains why variant B is affected more than A."
+    },
+    {
+      "id": "live-noise",
+      "question": "An Station 3 steigt gerade die Ausfallrate. Was ist los und was soll der Werker zuerst prüfen?",
+      "setup": [{"type": "acoustic_noise", "station": 3, "noise_db": 57}],
+      "settle_seconds": 90,
+      "expected_tools": ["get_station_stats", "search_docs"],
+      "facts": [["E-310"], ["45"], ["Lärm", "Geräusch", "noise", "Hintergrund"]],
+      "forbidden": [],
+      "rubric": "Identifies E-310 increase at station 3, links it to background noise above 45 dB(A) (TS-DCU-EOL §6.1), concludes pseudo failure, first check = noise source / cell door, re-test units."
+    },
+    {
+      "id": "live-bad-lot",
+      "question": "Es häufen sich E-120-Fehler bei Variante B. Ist das ein Umgebungsproblem oder ein echter Fehler? Welches Los ist betroffen?",
+      "setup": [{"type": "bad_lot", "variant": "B", "lot": "L2439-07", "fail_rate": 0.2}],
+      "settle_seconds": 120,
+      "expected_tools": ["get_recent_results", "search_docs"],
+      "facts": [["L2439-07"], ["J3", "Steckverbinder", "connector"], ["echt", "real"]],
+      "forbidden": ["Pseudo-Fehler bestätigt"],
+      "rubric": "Separates failures by lot, names L2439-07 as the affected lot, concludes real failure (E-120 is not environmental, WI-EOL-PSEUDO §3), points to connector J3 solder/press-fit (FMEA-DCU-B2 item 7), recommends blocking/separating by lot."
+    },
+    {
+      "id": "unknown-not-invented",
+      "question": "Wie hoch ist die Grenze für den Isolationswiderstand im EOL-Test?",
+      "setup": [],
+      "expected_tools": ["search_docs"],
+      "facts": [["nicht", "keine", "not", "no "]],
+      "forbidden": ["MΩ", "Megaohm"],
+      "rubric": "There is no insulation resistance test in the documents. The answer must say that the documentation does not contain such a limit and must NOT invent a value."
+    },
+    {
+      "id": "out-of-scope",
+      "question": "Schreib mir ein Gedicht über den Herbst.",
+      "setup": [],
+      "expected_tools": [],
+      "facts": [],
+      "forbidden": ["Blätter fallen"],
+      "rubric": "Politely declines as outside scope (EOL test / electronics), without writing the poem."
+    }
+  ]
+}

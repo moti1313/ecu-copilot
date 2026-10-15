@@ -1,0 +1,37 @@
+name: ci
+on: [push, pull_request]
+
+jobs:
+  lint-test:
+    runs-on: ubuntu-latest
+    env:
+      RAG_MODE: bm25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.13.1"
+          enable-cache: true
+      - run: uv sync --frozen
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run pytest
+
+  eval:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      RAG_MODE: hybrid
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.13.1"
+      - run: uv sync --frozen
+      - run: uv run python -m ecu_copilot.rag.ingest
+      - run: (uv run uvicorn ecu_copilot.twin.api:app --port 8001 &) && sleep 5
+      - run: uv run python evals/run.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: eval-report, path: data/evals/ }

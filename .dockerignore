@@ -1,0 +1,13 @@
+.git
+.venv
+data
+.env
+__pycache__
+*.pyc
+.pytest_cache
+.ruff_cache
+tests
+evals
+examples
+.github
+.gitlab-ci.yml
