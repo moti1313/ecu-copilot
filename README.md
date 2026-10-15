@@ -41,6 +41,7 @@ from day one. It runs against a **digital twin** of three EOL test stations for 
 |---|---|---|
 | Agent loop | Anthropic SDK tool runner (`@beta_tool`) | ~40 lines, every line explainable; no framework between us and the API. The same loop written by hand is in `examples/hello_agent.py`. |
 | Model | `claude-opus-5-5` (agent), `claude-haiku-5-5` (eval judge) | adaptive thinking, strict tool schemas, prompt caching; a cheap judge for evals |
+| Provider switch | `LLM_PROVIDER=openai` → `gpt-5` / `gpt-5-mini` through the same tools and prompt | the loop is written by hand on chat completions (`OpenAICopilot`); shows that the design is not tied to one vendor. Prompt caching and SDK-level spans exist only on the Anthropic path. |
 | RAG | fastembed (multilingual MiniLM) + ChromaDB, fused with BM25 via RRF | embeddings for meaning (German questions over English docs), BM25 for exact tokens like `E-204`, `HB4821`; nothing leaves the machine except the question and the retrieved chunks |
 | Twin | FastAPI, in-memory, seeded RNG | deterministic enough to test, realistic enough to tell the story; replaceable by a real MES/test system behind the same REST contract |
 | Observability | OpenTelemetry → Jaeger; per-question JSONL metrics | the SDK emits spans on its own; one container for the UI; cost/latency/cache/citation KPIs without a SaaS |

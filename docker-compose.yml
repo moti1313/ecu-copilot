@@ -23,8 +23,11 @@ services:
       - twin
       - jaeger
     environment:
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}   # from .env; without it the service starts but /ask returns an auth error
-      AGENT_MODEL: ${AGENT_MODEL:-claude-opus-5-5}
+      LLM_PROVIDER: ${LLM_PROVIDER:-anthropic}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}   # from .env; without a key the service starts but /ask returns an auth error
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      AGENT_MODEL: ${AGENT_MODEL:-}
+      JUDGE_MODEL: ${JUDGE_MODEL:-}
       TWIN_URL: http://twin:8001
       TWIN_PUBLIC_URL: http://localhost:8001
       JAEGER_UI_URL: http://localhost:16686

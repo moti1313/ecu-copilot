@@ -19,14 +19,13 @@ import time
 from datetime import UTC, datetime
 from pathlib import Path
 
-import anthropic
 from pydantic import BaseModel, Field
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from ecu_copilot import config  # noqa: E402
 from ecu_copilot.copilot import tools  # noqa: E402
-from ecu_copilot.copilot.agent import Copilot  # noqa: E402
+from ecu_copilot.copilot.agent import make_copilot  # noqa: E402
 from ecu_copilot.copilot.twin_client import TwinClient  # noqa: E402
 from ecu_copilot.rag.index import DocumentIndex  # noqa: E402
 
@@ -53,12 +52,26 @@ Answer to grade:
 """
 
 
-def judge(client: anthropic.Anthropic, case: dict, answer: str) -> Verdict:
-    resp = client.messages.parse(
+def judge(case: dict, answer: str) -> Verdict:
+    """LLM-as-judge with a structured verdict, on whichever provider is configured."""
+    prompt = JUDGE_PROMPT.format(question=case["question"], rubric=case["rubric"], answer=answer)
+    if config.LLM_PROVIDER == "openai":
+        import openai
+
+        resp = openai.OpenAI().chat.completions.parse(
+            model=config.JUDGE_MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            response_format=Verdict,
+        )
+        return resp.choices[0].message.parsed
+
+    import anthropic
+
+    resp = anthropic.Anthropic().messages.parse(
         model=config.JUDGE_MODEL,
         max_tokens=1000,
         output_config={"effort": "low"},
-        messages=[{"role": "user", "content": JUDGE_PROMPT.format(question=case["question"], rubric=case["rubric"], answer=answer)}],
+        messages=[{"role": "user", "content": prompt}],
         output_format=Verdict,
     )
     return resp.parsed_output
@@ -90,8 +103,8 @@ def main() -> int:
         print(f"[evals] twin not reachable ({e}) - live cases will be skipped")
 
     tools.configure(index=DocumentIndex().load(), twin=twin)
-    client = anthropic.Anthropic()
-    agent = Copilot(client=client)
+    agent = make_copilot()
+    print(f"[evals] provider={config.LLM_PROVIDER} agent={config.AGENT_MODEL} judge={config.JUDGE_MODEL}")
 
     rows, total_cost = [], 0.0
     for case in cases:
@@ -114,7 +127,7 @@ def main() -> int:
         tools_called = [c.name for c in r.tool_calls]
         tools_missing = [t for t in case["expected_tools"] if t not in tools_called]
         facts_missing, forbidden_hit = check_facts(case, r.answer)
-        verdict = None if args.no_judge or r.error else judge(client, case, r.answer)
+        verdict = None if args.no_judge or r.error else judge(case, r.answer)
         passed = not r.error and not tools_missing and not facts_missing and not forbidden_hit and (verdict is None or verdict.passed)
         rows.append(
             {

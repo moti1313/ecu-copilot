@@ -9,7 +9,6 @@ import contextlib
 from collections.abc import AsyncIterator
 from pathlib import Path
 
-import anthropic
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from opentelemetry import trace
@@ -18,7 +17,7 @@ from pydantic import BaseModel, Field
 from .. import config
 from ..rag.index import DocumentIndex
 from . import tools
-from .agent import Copilot
+from .agent import make_copilot
 from .metrics import MetricsStore
 from .telemetry import setup_tracing
 from .twin_client import TwinClient
@@ -37,11 +36,13 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     index.load()
     tools.configure(index=index, twin=TwinClient())
     metrics = MetricsStore()
-    client = anthropic.Anthropic(open_telemetry={"tracer_provider": provider})
-    state["copilot"] = Copilot(client=client, metrics=metrics)
+    state["copilot"] = make_copilot(metrics=metrics, tracer_provider=provider)
     state["metrics"] = metrics
     state["index"] = index
-    print(f"[copilot] ready: model={config.AGENT_MODEL} rag={index.mode} twin={config.TWIN_URL} otel={config.OTEL_ENDPOINT}")
+    print(
+        f"[copilot] ready: provider={config.LLM_PROVIDER} model={config.AGENT_MODEL} rag={index.mode} "
+        f"twin={config.TWIN_URL} otel={config.OTEL_ENDPOINT}"
+    )
     yield
     provider.shutdown()
 
@@ -84,7 +85,13 @@ def health() -> dict:
         tools._get_twin().health()
     except Exception:  # noqa: BLE001
         twin_ok = False
-    return {"status": "ok", "twin_reachable": twin_ok, "index_ready": state["index"].ready, "model": config.AGENT_MODEL}
+    return {
+        "status": "ok",
+        "twin_reachable": twin_ok,
+        "index_ready": state["index"].ready,
+        "provider": config.LLM_PROVIDER,
+        "model": config.AGENT_MODEL,
+    }
 
 
 @app.get("/config")
@@ -92,6 +99,7 @@ def ui_config() -> dict:
     return {
         "twin_url": config.TWIN_PUBLIC_URL,
         "jaeger_url": config.JAEGER_UI_URL,
+        "provider": config.LLM_PROVIDER,
         "model": config.AGENT_MODEL,
         "rag_mode": config.RAG_MODE,
     }

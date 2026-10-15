@@ -19,8 +19,15 @@ def _env_path(name: str, default: Path) -> Path:
 
 
 # --- LLM ---------------------------------------------------------------------
-AGENT_MODEL = os.environ.get("AGENT_MODEL", "claude-opus-5-5")
-JUDGE_MODEL = os.environ.get("JUDGE_MODEL", "claude-haiku-5-5")
+# Two providers behind one interface (copilot/agent.py). Anthropic is the primary path
+# (tool runner, prompt caching, SDK tracing); OpenAI is the alternative path with a hand-written loop.
+LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "anthropic")  # anthropic | openai
+_DEFAULT_MODELS = {
+    "anthropic": ("claude-opus-5-5", "claude-haiku-5-5"),
+    "openai": ("gpt-5", "gpt-5-mini"),
+}
+AGENT_MODEL = os.environ.get("AGENT_MODEL", _DEFAULT_MODELS.get(LLM_PROVIDER, _DEFAULT_MODELS["anthropic"])[0])
+JUDGE_MODEL = os.environ.get("JUDGE_MODEL", _DEFAULT_MODELS.get(LLM_PROVIDER, _DEFAULT_MODELS["anthropic"])[1])
 AGENT_EFFORT = os.environ.get("AGENT_EFFORT", "medium")  # low | medium | high
 AGENT_MAX_TOKENS = int(os.environ.get("AGENT_MAX_TOKENS", "8000"))
 PROMPT_VERSION = "2026-10-15.1"  # bump when the system prompt changes; logged with every answer
@@ -30,6 +37,9 @@ PRICING = {
     "claude-opus-5-5": (4.00, 20.00, 5.00, 0.20),
     "claude-sonnet-5-5": (2.00, 10.00, 2.50, 0.20),
     "claude-haiku-5-5": (0.10, 0.50, 0.125, 0.01),
+    "gpt-5": (1.25, 10.00, 1.25, 0.125),
+    "gpt-5-mini": (0.25, 2.00, 0.25, 0.025),
+    "gpt-5-nano": (0.05, 0.40, 0.05, 0.005),
 }
 
 # --- Services ----------------------------------------------------------------

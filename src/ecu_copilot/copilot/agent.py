@@ -1,8 +1,11 @@
-"""The agent loop, production shape: SDK tool runner + system prompt + guardrails + accounting.
+"""The agent loop, production shape: system prompt + tools + guardrails + accounting,
+behind one interface for two providers.
 
-Compare with hello_agent.py (the same loop by hand). What is added here:
+- `Copilot`        - Anthropic: the SDK tool runner drives the loop; prompt caching, SDK spans.
+- `OpenAICopilot`  - OpenAI: the same loop written by hand on chat completions (function calling).
+
+Compare with examples/hello_agent.py (the loop by hand). What is added here:
 - a system prompt with the domain rules (cite, compare live data with the spec, say "unknown")
-- prompt caching on the system prompt (the stable prefix is paid once, then ~10 %)
 - usage summed over all iterations -> cost per question
 - a trace of every tool call for the UI and the evals
 - output guardrail: a documentation answer without a citation is flagged
@@ -10,16 +13,19 @@ Compare with hello_agent.py (the same loop by hand). What is added here:
 
 from __future__ import annotations
 
+import json
 import re
 import time
 from dataclasses import asdict, dataclass, field
 
-import anthropic
+from opentelemetry import trace
 
 from .. import config
 from .metrics import MetricsStore, QuestionRecord, Usage, now_iso
 from .telemetry import current_trace_id
 from .tools import ALL_TOOLS
+
+tracer = trace.get_tracer("ecu-copilot.agent")
 
 SYSTEM_PROMPT = """You are the ECU Copilot, an assistant for test and electronics engineers on the end-of-line (EOL) test line for door control units DCU-A1 (variant A) and DCU-B2 (variant B). Three stations: EOL-1 tests A, EOL-2 tests A and B, EOL-3 tests B.
 
@@ -57,6 +63,7 @@ class AskResult:
     stop_reason: str | None = None
     citation_missing: bool = False
     trace_id: str | None = None
+    provider: str = config.LLM_PROVIDER
     model: str = config.AGENT_MODEL
     prompt_version: str = config.PROMPT_VERSION
     error: str | None = None
@@ -66,69 +73,34 @@ class AskResult:
 
 
 class Copilot:
-    def __init__(
-        self,
-        client: anthropic.Anthropic | None = None,
-        model: str | None = None,
-        metrics: MetricsStore | None = None,
-        max_iterations: int = 10,
-    ) -> None:
-        self.client = client or anthropic.Anthropic()
+    """Anthropic implementation. Subclasses override `_run` (the loop) and `_describe_error`."""
+
+    provider = "anthropic"
+
+    def __init__(self, client=None, model: str | None = None, metrics: MetricsStore | None = None, max_iterations: int = 10) -> None:
+        self.client = client
         self.model = model or config.AGENT_MODEL
         self.metrics = metrics
         self.max_iterations = max_iterations
 
+    # --- shared: guardrails, accounting, logging -------------------------------------
     def ask(self, question: str, history: list[dict] | None = None) -> AskResult:
         t0 = time.perf_counter()
         question = (question or "").strip()
+        result = AskResult(provider=self.provider, model=self.model)
         if not question:
-            return self._finish(AskResult(answer="", error="empty question"), question, t0)
+            result.error = "empty question"
+            return self._finish(result, question, t0)
         if len(question) > MAX_QUESTION_CHARS:  # input guardrail
-            return self._finish(AskResult(answer="", error=f"question longer than {MAX_QUESTION_CHARS} characters"), question, t0)
+            result.error = f"question longer than {MAX_QUESTION_CHARS} characters"
+            return self._finish(result, question, t0)
 
         messages = list(history or []) + [{"role": "user", "content": question}]
-        result = AskResult(model=self.model)
         usage = Usage()
         try:
-            runner = self.client.beta.messages.tool_runner(
-                model=self.model,
-                max_tokens=config.AGENT_MAX_TOKENS,
-                system=[{"type": "text", "text": SYSTEM_PROMPT, "cache_control": {"type": "ephemeral"}}],
-                tools=ALL_TOOLS,
-                messages=messages,
-                output_config={"effort": config.AGENT_EFFORT},
-                max_iterations=self.max_iterations,
-            )
-            last = None
-            for message in runner:
-                last = message
-                result.iterations += 1
-                usage.add(message.usage)
-                calls = {b.id: ToolCall(name=b.name, input=dict(b.input)) for b in message.content if b.type == "tool_use"}
-                tool_response = runner.generate_tool_call_response()  # runs the tools (cached by the runner)
-                if tool_response is not None:
-                    for block in tool_response["content"]:
-                        call = calls.get(block["tool_use_id"])
-                        if call is not None:
-                            call.result_preview = str(block["content"])[:300]
-                result.tool_calls.extend(calls.values())
-            if last is not None:
-                result.stop_reason = last.stop_reason
-                result.answer = "".join(b.text for b in last.content if b.type == "text")
-                if last.stop_reason == "max_tokens":
-                    result.error = "answer truncated (max_tokens)"
-                elif last.stop_reason == "refusal":
-                    result.error = "model refused"
-        except anthropic.AuthenticationError as e:
-            result.error = f"authentication failed: {e.message}"
-        except anthropic.RateLimitError:
-            result.error = "rate limited - retry later"
-        except anthropic.APIStatusError as e:
-            result.error = f"API error {e.status_code}: {e.message}"
-        except anthropic.APIConnectionError as e:
-            result.error = f"connection error: {e}"
-        except Exception as e:  # noqa: BLE001 - e.g. the SDK raises TypeError when no credentials are configured
-            result.error = f"{type(e).__name__}: {str(e)[:300]}"
+            self._run(messages, result, usage)
+        except Exception as e:  # noqa: BLE001 - every failure becomes a logged, visible error, never a 500
+            result.error = self._describe_error(e)
 
         result.usage = asdict(usage)
         result.cost_usd = round(usage.cost_usd(self.model), 5)
@@ -144,7 +116,7 @@ class Copilot:
                 QuestionRecord(
                     timestamp=now_iso(),
                     question=question[:500],
-                    model=result.model,
+                    model=f"{result.provider}:{result.model}",
                     prompt_version=result.prompt_version,
                     latency_s=result.latency_s,
                     iterations=result.iterations,
@@ -157,3 +129,148 @@ class Copilot:
                 )
             )
         return result
+
+    # --- Anthropic loop ------------------------------------------------------------------
+    def _client(self):
+        if self.client is None:
+            import anthropic
+
+            self.client = anthropic.Anthropic()
+        return self.client
+
+    def _run(self, messages: list[dict], result: AskResult, usage: Usage) -> None:
+        runner = self._client().beta.messages.tool_runner(
+            model=self.model,
+            max_tokens=config.AGENT_MAX_TOKENS,
+            system=[{"type": "text", "text": SYSTEM_PROMPT, "cache_control": {"type": "ephemeral"}}],
+            tools=ALL_TOOLS,
+            messages=messages,
+            output_config={"effort": config.AGENT_EFFORT},
+            max_iterations=self.max_iterations,
+        )
+        last = None
+        for message in runner:
+            last = message
+            result.iterations += 1
+            usage.add(message.usage)
+            calls = {b.id: ToolCall(name=b.name, input=dict(b.input)) for b in message.content if b.type == "tool_use"}
+            tool_response = runner.generate_tool_call_response()  # runs the tools (cached by the runner)
+            if tool_response is not None:
+                for block in tool_response["content"]:
+                    call = calls.get(block["tool_use_id"])
+                    if call is not None:
+                        call.result_preview = str(block["content"])[:300]
+            result.tool_calls.extend(calls.values())
+        if last is not None:
+            result.stop_reason = last.stop_reason
+            result.answer = "".join(b.text for b in last.content if b.type == "text")
+            if last.stop_reason == "max_tokens":
+                result.error = "answer truncated (max_tokens)"
+            elif last.stop_reason == "refusal":
+                result.error = "model refused"
+
+    def _describe_error(self, e: Exception) -> str:
+        import anthropic
+
+        if isinstance(e, anthropic.AuthenticationError):
+            return f"authentication failed: {e.message}"
+        if isinstance(e, anthropic.RateLimitError):
+            return "rate limited - retry later"
+        if isinstance(e, anthropic.APIStatusError):
+            return f"API error {e.status_code}: {e.message}"
+        if isinstance(e, anthropic.APIConnectionError):
+            return f"connection error: {e}"
+        return f"{type(e).__name__}: {str(e)[:300]}"  # e.g. TypeError when no credentials are configured
+
+
+class OpenAICopilot(Copilot):
+    """OpenAI implementation: chat completions + function calling, loop written by hand
+    (there is no tool runner in that SDK). Same tools, same prompt, same guardrails."""
+
+    provider = "openai"
+
+    def _client(self):
+        if self.client is None:
+            import openai
+
+            self.client = openai.OpenAI()
+        return self.client
+
+    @staticmethod
+    def _tool_specs() -> list[dict]:
+        specs = []
+        for t in ALL_TOOLS:
+            d = t.to_dict()
+            specs.append(
+                {"type": "function", "function": {"name": d["name"], "description": d["description"], "parameters": d["input_schema"]}}
+            )
+        return specs
+
+    def _run(self, messages: list[dict], result: AskResult, usage: Usage) -> None:
+        tools_by_name = {t.to_dict()["name"]: t for t in ALL_TOOLS}
+        convo = [{"role": "system", "content": SYSTEM_PROMPT}, *messages]
+        params: dict = {"model": self.model, "tools": self._tool_specs(), "max_completion_tokens": config.AGENT_MAX_TOKENS}
+        if self.model.startswith(("gpt-5", "o")):
+            params["reasoning_effort"] = config.AGENT_EFFORT
+
+        for _ in range(self.max_iterations):
+            with tracer.start_as_current_span("openai.chat.completions") as span:
+                resp = self._client().chat.completions.create(messages=convo, **params)
+                u = resp.usage
+                cached = getattr(getattr(u, "prompt_tokens_details", None), "cached_tokens", 0) or 0
+                usage.input_tokens += (u.prompt_tokens or 0) - cached
+                usage.cache_read_input_tokens += cached
+                usage.output_tokens += u.completion_tokens or 0
+                span.set_attribute("gen_ai.request.model", self.model)
+                span.set_attribute("gen_ai.usage.input_tokens", u.prompt_tokens or 0)
+                span.set_attribute("gen_ai.usage.output_tokens", u.completion_tokens or 0)
+            result.iterations += 1
+            choice = resp.choices[0]
+            msg = choice.message
+            result.stop_reason = choice.finish_reason
+            convo.append({"role": "assistant", "content": msg.content, "tool_calls": [tc.model_dump() for tc in msg.tool_calls or []]})
+
+            if not msg.tool_calls:
+                result.answer = msg.content or ""
+                if choice.finish_reason == "length":
+                    result.error = "answer truncated (max_completion_tokens)"
+                elif choice.finish_reason == "content_filter":
+                    result.error = "model refused (content filter)"
+                return
+
+            for tc in msg.tool_calls:  # run every call, return every result (one tool message each)
+                try:
+                    args = json.loads(tc.function.arguments or "{}")
+                except json.JSONDecodeError:
+                    args = {}
+                call = ToolCall(name=tc.function.name, input=args)
+                tool = tools_by_name.get(tc.function.name)
+                with tracer.start_as_current_span(f"tool.{tc.function.name}"):
+                    output = tool.call(args) if tool else json.dumps({"error": f"unknown tool {tc.function.name}"})
+                call.result_preview = str(output)[:300]
+                result.tool_calls.append(call)
+                convo.append({"role": "tool", "tool_call_id": tc.id, "content": str(output)})
+        result.error = f"stopped after {self.max_iterations} iterations"
+
+    def _describe_error(self, e: Exception) -> str:
+        import openai
+
+        if isinstance(e, openai.AuthenticationError):
+            return "authentication failed: check OPENAI_API_KEY"
+        if isinstance(e, openai.RateLimitError):
+            return f"rate limited or out of credits: {str(e)[:200]}"
+        if isinstance(e, openai.APIStatusError):
+            return f"API error {e.status_code}: {str(e)[:200]}"
+        if isinstance(e, openai.APIConnectionError):
+            return f"connection error: {e}"
+        return f"{type(e).__name__}: {str(e)[:300]}"
+
+
+def make_copilot(metrics: MetricsStore | None = None, tracer_provider=None) -> Copilot:
+    """Factory: pick the provider from LLM_PROVIDER."""
+    if config.LLM_PROVIDER == "openai":
+        return OpenAICopilot(metrics=metrics)
+    import anthropic
+
+    client = anthropic.Anthropic(open_telemetry={"tracer_provider": tracer_provider}) if tracer_provider else anthropic.Anthropic()
+    return Copilot(client=client, metrics=metrics)

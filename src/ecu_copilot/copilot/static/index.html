@@ -83,7 +83,7 @@ let chart;
 
 async function init() {
   try { CFG = await (await fetch('/config')).json(); } catch {}
-  document.getElementById('cfg').textContent = `Modell ${CFG.model} · RAG ${CFG.rag_mode}`;
+  document.getElementById('cfg').textContent = `${CFG.provider} · ${CFG.model} · RAG ${CFG.rag_mode}`;
   document.getElementById('jaeger').href = CFG.jaeger_url + '/search?service=ecu-copilot';
   chart = new Chart(document.getElementById('chart'), {
     type: 'line', data: { datasets: [] },
