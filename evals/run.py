@@ -77,6 +77,18 @@ def judge(case: dict, answer: str) -> Verdict:
     return resp.parsed_output
 
 
+def _retry(fn, *args, attempts: int = 5, wait_s: float = 3.0):
+    """Twin calls during a run must not kill the run (e.g. a container restart) - retry, then give up loudly."""
+    for i in range(attempts):
+        try:
+            return fn(*args)
+        except Exception as e:  # noqa: BLE001
+            print(f"[evals] twin call failed ({e}); retry {i + 1}/{attempts} in {wait_s}s")
+            time.sleep(wait_s)
+    print("[evals] twin unreachable - continuing without fault setup")
+    return None
+
+
 def check_facts(case: dict, answer: str) -> tuple[list[str], list[str]]:
     missing = [" / ".join(alts) for alts in case["facts"] if not any(a in answer for a in alts)]
     forbidden = [f for f in case["forbidden"] if f in answer]
@@ -112,9 +124,9 @@ def main() -> int:
             rows.append({"id": case["id"], "status": "skipped", "reason": "twin not reachable"})
             continue
         if case["setup"]:
-            twin.clear_faults()
+            _retry(twin.clear_faults)
             for f in case["setup"]:
-                twin.add_fault(f)
+                _retry(twin.add_fault, f)
             settle = case.get("settle_seconds", 60)
             print(f"[evals] {case['id']}: faults injected, settling {settle}s ...")
             time.sleep(settle)
@@ -122,7 +134,7 @@ def main() -> int:
         r = agent.ask(case["question"])
         total_cost += r.cost_usd
         if case["setup"]:
-            twin.clear_faults()
+            _retry(twin.clear_faults)
 
         tools_called = [c.name for c in r.tool_calls]
         tools_missing = [t for t in case["expected_tools"] if t not in tools_called]

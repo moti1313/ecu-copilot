@@ -33,7 +33,7 @@
       "question": "Warum steigt der Ruhestrom des Steuergeräts mit der Temperatur, und wie stark pro Kelvin?",
       "setup": [],
       "expected_tools": ["search_docs"],
-      "facts": [["3.5", "3,5"], ["Leckstrom", "leakage", "Leakage"], ["DS-MCU-XM32F7"]],
+      "facts": [["3.5", "3,5"], ["Leckstr", "leckstr", "leakage", "Leakage"], ["DS-MCU-XM32F7"]],
       "forbidden": [],
       "rubric": "Explains transistor leakage rising exponentially with temperature, approx. 3.5 % per kelvin (doubling roughly every 20 K), citing DS-MCU-XM32F7 §7.3."
     },

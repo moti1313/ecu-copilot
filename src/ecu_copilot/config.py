@@ -21,14 +21,14 @@ def _env_path(name: str, default: Path) -> Path:
 # --- LLM ---------------------------------------------------------------------
 # Two providers behind one interface (copilot/agent.py). Anthropic is the primary path
 # (tool runner, prompt caching, SDK tracing); OpenAI is the alternative path with a hand-written loop.
-LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "anthropic")  # anthropic | openai
+LLM_PROVIDER = os.environ.get("LLM_PROVIDER") or "anthropic"  # anthropic | openai  ("or": empty env = unset)
 _DEFAULT_MODELS = {
     "anthropic": ("claude-opus-5-5", "claude-haiku-5-5"),
     "openai": ("gpt-5", "gpt-5-mini"),
 }
-AGENT_MODEL = os.environ.get("AGENT_MODEL", _DEFAULT_MODELS.get(LLM_PROVIDER, _DEFAULT_MODELS["anthropic"])[0])
-JUDGE_MODEL = os.environ.get("JUDGE_MODEL", _DEFAULT_MODELS.get(LLM_PROVIDER, _DEFAULT_MODELS["anthropic"])[1])
-AGENT_EFFORT = os.environ.get("AGENT_EFFORT", "medium")  # low | medium | high
+AGENT_MODEL = os.environ.get("AGENT_MODEL") or _DEFAULT_MODELS.get(LLM_PROVIDER, _DEFAULT_MODELS["anthropic"])[0]
+JUDGE_MODEL = os.environ.get("JUDGE_MODEL") or _DEFAULT_MODELS.get(LLM_PROVIDER, _DEFAULT_MODELS["anthropic"])[1]
+AGENT_EFFORT = os.environ.get("AGENT_EFFORT") or "medium"  # low | medium | high
 AGENT_MAX_TOKENS = int(os.environ.get("AGENT_MAX_TOKENS", "8000"))
 PROMPT_VERSION = "2026-10-15.1"  # bump when the system prompt changes; logged with every answer
 
