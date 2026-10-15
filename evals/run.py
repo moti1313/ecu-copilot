@@ -90,8 +90,9 @@ def _retry(fn, *args, attempts: int = 5, wait_s: float = 3.0):
 
 
 def check_facts(case: dict, answer: str) -> tuple[list[str], list[str]]:
-    missing = [" / ".join(alts) for alts in case["facts"] if not any(a in answer for a in alts)]
-    forbidden = [f for f in case["forbidden"] if f in answer]
+    low = answer.lower()  # case-insensitive: "Echter Fehler" must satisfy "echt"
+    missing = [" / ".join(alts) for alts in case["facts"] if not any(a.lower() in low for a in alts)]
+    forbidden = [f for f in case["forbidden"] if f.lower() in low]
     return missing, forbidden
 
 

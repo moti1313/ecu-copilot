@@ -50,7 +50,7 @@
       "id": "live-drift-pseudo-failure",
       "question": "Warum fällt Variante B an Station 2 seit 10 Minuten überdurchschnittlich oft durch? Ist das ein echter Fehler oder ein Pseudo-Fehler?",
       "setup": [{"type": "temperature_drift", "station": 2, "delta_c": 10, "ramp_s": 0}],
-      "settle_seconds": 90,
+      "settle_seconds": 150,
       "expected_tools": ["get_station_stats", "search_docs"],
       "facts": [["E-204"], ["Pseudo", "pseudo"], ["32"], ["4.2"]],
       "forbidden": ["sperren Sie alle", "block all units"],
