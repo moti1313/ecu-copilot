@@ -1,0 +1,19 @@
+[project]
+name = "ecu-copilot"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Morteza Molaei", email = "m.molaei@ostfalia.de" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "anthropic>=1.15.0",
+]
+
+[project.scripts]
+ecu-copilot = "ecu_copilot:main"
+
+[build-system]
+requires = ["uv_build>=0.13.1,<0.14.0"]
+build-backend = "uv_build"
