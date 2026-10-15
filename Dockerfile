@@ -17,8 +17,8 @@ COPY pyproject.toml uv.lock README.md ./
 COPY src ./src
 COPY docs ./docs
 RUN --mount=type=cache,target=/root/.cache/uv uv sync --frozen --no-dev
-ENV PATH="/app/.venv/bin:$PATH" DATA_DIR=/data
-RUN useradd -r -u 1001 app && mkdir -p /data && chown app /data
+ENV PATH="/app/.venv/bin:$PATH" DATA_DIR=/data HF_HOME=/data/hf
+RUN useradd -r -u 1001 -m app && mkdir -p /data && chown app /data
 USER app
 VOLUME ["/data"]
 EXPOSE 8000
