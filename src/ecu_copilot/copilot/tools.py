@@ -134,7 +134,7 @@ def get_recent_results(
                 variant=variant,
                 minutes=max(1, min(int(minutes), 240)),
                 only_failed=only_failed,
-                limit=max(1, min(int(limit), 200)),
+                limit=max(1, min(int(limit), 40)),  # raw rows are expensive context; summaries come from the engineering tools
             )
         except Exception as e:  # noqa: BLE001
             return _error(f"twin not reachable: {e}")
@@ -219,4 +219,116 @@ Evidence: {", ".join(evidence_citations) or "none cited"}
         return _dumps({"saved_to": str(path), "markdown": body})
 
 
-ALL_TOOLS = [search_docs, get_station_stats, get_recent_results, lookup_part, draft_8d_report]
+# ---- deterministic engineering tools (V2) -----------------------------------------------
+def _window(station: int | None, variant: str | None, minutes: int) -> list[dict]:
+    return _get_twin().results(station=station, variant=variant, minutes=max(1, min(int(minutes), 240)), only_failed=False, limit=10000)
+
+
+@beta_tool
+def check_validity(station: int, variant: str | None = None, minutes: int = 10) -> str:
+    """Apply the specification's validity rules to every test result of a station in a time window:
+    per failure code, how many FAIL verdicts are INVALID per spec (board temperature outside the
+    18–32 °C window for E-204, background noise above 45 dB(A) for E-310) and how many remain real
+    FAILs after that. Includes the rule references and example units. Call this BEFORE you say
+    anything about validity, pseudo failures or the test environment. INVALID means "the unit
+    cannot be assessed from this result", not "the unit is good".
+
+    Args:
+        station: Station number 1-3.
+        variant: "A" or "B", or omit for both.
+        minutes: Time window in minutes (1-240).
+    """
+    with tracer.start_as_current_span("tool.check_validity"):
+        try:
+            from ..engineering.validity import check_validity as _cv
+
+            out = _cv(_window(station, variant, minutes))
+            out["scope"] = {"station": station, "variant": variant, "window_minutes": minutes}
+            return _dumps(out)
+        except Exception as e:  # noqa: BLE001
+            return _error(f"check_validity failed: {e}")
+
+
+@beta_tool
+def detect_change(station: int, variant: str | None = None, metric: str = "failure_rate", minutes: int = 60, bucket_s: int = 60) -> str:
+    """Find when and how strongly a metric changed in a time window (two-sample change-point scan over
+    time buckets): onset time, level before/after, relative change, z-score and whether the change is
+    significant. Metrics: failure_rate, quiescent_current_ua, board_temp_c, ambient_noise_db,
+    acoustic_score. Call this BEFORE you say "since X minutes" or "rising" - do not estimate trends
+    yourself from two windows.
+
+    Args:
+        station: Station number 1-3.
+        variant: "A" or "B", or omit for both.
+        metric: Which metric to scan (see list above).
+        minutes: Window to scan in minutes (10-240).
+        bucket_s: Bucket size in seconds (30-600).
+    """
+    with tracer.start_as_current_span("tool.detect_change"):
+        try:
+            from ..engineering.change import detect_change as _dc
+
+            out = _dc(_window(station, variant, max(10, minutes)), metric=metric, bucket_s=max(30, min(int(bucket_s), 600)))
+            out["scope"] = {"station": station, "variant": variant, "window_minutes": minutes}
+            return _dumps(out)
+        except Exception as e:  # noqa: BLE001
+            return _error(f"detect_change failed: {e}")
+
+
+@beta_tool
+def cluster_failures(
+    station: int | None = None, variant: str | None = None, by: str = "lot", code: str | None = None, minutes: int = 30
+) -> str:
+    """Check whether failures concentrate in one group - by lot, firmware, station, hour or code -
+    with the references that make concentration meaningful: lift (share of failures vs share of
+    tested units), failure rate inside vs outside the group (rate ratio) and a z-score. Call this
+    BEFORE you say a lot, a firmware version or a station is affected.
+
+    Args:
+        station: Station number 1-3, or omit for all stations.
+        variant: "A" or "B", or omit for both.
+        by: Grouping: lot | firmware | station | hour | variant | code.
+        code: Restrict to one failure code, e.g. "E-120"; omit for all failures.
+        minutes: Time window in minutes (1-240).
+    """
+    with tracer.start_as_current_span("tool.cluster_failures"):
+        try:
+            from ..engineering.cluster import cluster_failures as _cf
+
+            out = _cf(_window(station, variant, minutes), by=by, code=code)
+            out["scope"] = {"station": station, "variant": variant, "window_minutes": minutes}
+            return _dumps(out)
+        except Exception as e:  # noqa: BLE001
+            return _error(f"cluster_failures failed: {e}")
+
+
+@beta_tool
+def describe_signal(station: int, variant: str | None = None, minutes: int = 20) -> str:
+    """Compact descriptors of the measurements in a window: mean/min/max and trend per measurement,
+    the relation between quiescent current and station temperature (does Iq follow T1 as the leakage
+    model predicts, or are they decoupled - the signature of a faulty temperature sensor), and flags
+    for conditions outside the specification. Use this instead of reading raw result lists.
+
+    Args:
+        station: Station number 1-3.
+        variant: "A" or "B", or omit for both.
+        minutes: Time window in minutes (1-240).
+    """
+    with tracer.start_as_current_span("tool.describe_signal"):
+        try:
+            from ..engineering.describe import describe_signal as _ds
+
+            out = _ds(_window(station, variant, minutes))
+            out["scope"] = {"station": station, "variant": variant, "window_minutes": minutes}
+            return _dumps(out)
+        except Exception as e:  # noqa: BLE001
+            return _error(f"describe_signal failed: {e}")
+
+
+TOOLS_V1 = [search_docs, get_station_stats, get_recent_results, lookup_part, draft_8d_report]
+TOOLS_V2 = [check_validity, detect_change, cluster_failures, describe_signal, *TOOLS_V1]
+ALL_TOOLS = TOOLS_V2
+
+
+def tools_for(profile: str) -> list:
+    return TOOLS_V1 if profile == "v1" else TOOLS_V2
