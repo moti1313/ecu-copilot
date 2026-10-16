@@ -91,6 +91,13 @@ def clear_faults() -> dict:
     return {"cleared": sim.clear_faults()}
 
 
+@app.post("/reset")
+def reset(seed: int = 42, history_minutes: int = Query(default=30, ge=0, le=240)) -> dict:
+    """Clean, reproducible state: no faults, fresh seeded history. Used by the benchmark between scenarios."""
+    n = sim.reset(seed=seed, history_minutes=history_minutes, interval_s=config.TWIN_INTERVAL_S)
+    return {"reset": True, "seed": seed, "seeded_results": n}
+
+
 @app.delete("/faults/{fault_id}")
 def delete_fault(fault_id: int) -> dict:
     if not sim.clear_faults(fault_id):

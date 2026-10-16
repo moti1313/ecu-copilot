@@ -21,3 +21,19 @@ Je Szenario (Befund korrekt / Bewertungen korrekt, über Wiederholungen):
 Fehler: 7 Läufe – v2/S01-temperature-drift: answer truncated (max_completion_tokens); v2/S01-temperature-drift: answer truncated (max_completion_tokens); v2/S01-temperature-drift: answer truncated (max_completion_tokens); v1/S08-drift-and-bad-lot: answer truncated (max_completion_tokens); v2/S08-drift-and-bad-lot: answer truncated (max_completion_tokens)
 
 > **Anmerkung zu diesem Lauf:** Alle sechs V2-Läufe wurden bei `max_completion_tokens = 8000` abgeschnitten (bei gpt-5 zählen Reasoning-Tokens mit) – die V2-Zeile misst die Konfiguration, nicht das System. Limit auf 24 000 erhöht, V1/V2 im nächsten Abschnitt wiederholt. „Herkunft live" ist für B1/V1 strukturell 0, weil das V1-Schema keine Referenzen hat (ab dem nächsten Lauf als „n/a" ausgewiesen). „Stützung Dok" 0 % bei B0: B0 formuliert seine Belege auf Deutsch, die Dokumente sind Englisch – die Schlüsselwort-Heuristik findet sie nicht; eine bekannte Grenze der Heuristik, kein Befund über B0.
+
+## 2026-10-16 19:24 UTC · Modell gpt-5 · Szenarien S01-temperature-drift, S08-drift-and-bad-lot · 12 Läufe
+
+| System | Befund | Bewertungen (alle Gruppen) | Ursache | Pflicht-Tools | Zitat vorh. | Herkunft live | Herkunft Dok | Stützung Dok | Nächster Test | Konsistenz | Ø s | Ø $ |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| V1 | 50 % | 0 % | 0 % | 0 % | 100 % | – | 67 % (22/33) | 15 % (5/33) | 33 % | 67 % | 69.2 | 0.109 |
+| V2 | 83 % | 83 % | 100 % | 100 % | 100 % | 97 % (108/111) | 100 % (30/30) | 40 % (12/30) | 100 % | 83 % | 101.1 | 0.153 |
+
+Je Szenario (Befund korrekt / Bewertungen korrekt, über Wiederholungen):
+
+| Szenario | V1 | V2 |
+|---|---|---|
+| S01-temperature-drift | 3/3 · 0/3 | 2/3 · 3/3 |
+| S08-drift-and-bad-lot | 0/3 · 0/3 | 3/3 · 2/3 |
+
+> **Anmerkung zu diesem Lauf (V1/V2, Limit 24 000):** Noch *ohne* eingefrorenen Datenstand und ohne Twin-Reset – die Systeme liefen nacheinander auf dem lebenden Twin, und die E-120-Fehler des vorigen S08-Laufs (Lauf 1) lagen noch im 30-Minuten-Fenster (Lösbarkeitsprüfung: 144 Los-Fehler statt ~20). Das erklärt vermutlich den einen „mixed"-Befund von V2 auf S01. Beantwortet ist: Die V2-Abbrüche in Lauf 1 waren das Token-Limit. Der nächste Lauf verwendet Schnappschuss + Reset je Szenario und alle fünf Systeme.

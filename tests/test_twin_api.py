@@ -28,3 +28,12 @@ def test_fault_validation(twin_client):
 def test_results_filters(twin_client):
     rows = twin_client.get("/results", params={"station": 3, "only_failed": True, "limit": 20, "minutes": 60}).json()
     assert all(r["station"] == 3 and r["verdict"] == "fail" and r["failure_code"] for r in rows)
+
+
+def test_reset_clears_faults_and_results(twin_client):
+    twin_client.post("/faults", json={"type": "temperature_drift", "station": 2})
+    r = twin_client.post("/reset", params={"seed": 7, "history_minutes": 2}).json()
+    assert r["reset"] and r["seeded_results"] > 0
+    assert twin_client.get("/faults").json() == []
+    h = twin_client.get("/health").json()
+    assert h["active_faults"] == 0 and h["results"] <= r["seeded_results"] + 10

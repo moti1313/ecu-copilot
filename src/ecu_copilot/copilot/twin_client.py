@@ -40,3 +40,6 @@ class TwinClient:
 
     def clear_faults(self) -> dict:
         return self._client.delete("/faults").raise_for_status().json()
+
+    def reset(self, seed: int = 42, history_minutes: int = 30) -> dict:
+        return self._client.post("/reset", params={"seed": seed, "history_minutes": history_minutes}, timeout=60).raise_for_status().json()

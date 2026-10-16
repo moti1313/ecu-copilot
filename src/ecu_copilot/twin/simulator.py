@@ -74,6 +74,19 @@ class Simulator:
     def stations(self) -> list[StationInfo]:
         return STATIONS
 
+    def reset(self, seed: int = 42, history_minutes: int = 0, interval_s: float = 1.5) -> int:
+        """Forget every result and fault and start from a clean, reproducible state (benchmark isolation:
+        failures of the previous scenario must not linger in the next scenario's windows)."""
+        with self._lock:
+            self._rng = random.Random(seed)
+            self._results.clear()
+            self._faults.clear()
+            self._next_result_id = 1
+            self._next_fault_id = 1
+            self._seq.clear()
+            self._ambient_c = {s.station: 24.0 + self._rng.uniform(-1.0, 1.0) for s in STATIONS}
+        return self.seed_history(history_minutes, interval_s) if history_minutes else 0
+
     def add_fault(self, fault: Fault, now: datetime | None = None) -> ActiveFault:
         with self._lock:
             active = ActiveFault(id=self._next_fault_id, started_at=now or _utcnow(), fault=fault)

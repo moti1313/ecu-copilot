@@ -232,8 +232,8 @@ def main() -> int:
     )
 
     runs = []
-    for sc in scenarios:
-        live.clear_faults()
+    for i_sc, sc in enumerate(scenarios):
+        live.reset(seed=1000 + i_sc, history_minutes=30)  # isolation: nothing from the previous scenario lingers
         for f in sc["setup"]:
             live.add_fault(f)
         settle = args.settle if args.settle is not None else sc.get("settle_s", 120)
