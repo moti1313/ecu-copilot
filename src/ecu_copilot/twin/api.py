@@ -98,6 +98,17 @@ def delete_fault(fault_id: int) -> dict:
     return {"cleared": 1}
 
 
+@app.get("/series")
+def series(
+    station: int = Query(ge=1, le=3),
+    variant: Variant | None = None,
+    minutes: int = Query(default=30, ge=1, le=240),
+    bucket_s: int = Query(default=30, ge=5, le=600),
+) -> dict:
+    """Bucketed signal history plus every failed unit, for the signal view."""
+    return sim.series(station=station, variant=variant, minutes=minutes, bucket_s=bucket_s)
+
+
 @app.get("/events")
 async def events() -> StreamingResponse:
     """Server-sent events: one JSON test result per line as they happen."""

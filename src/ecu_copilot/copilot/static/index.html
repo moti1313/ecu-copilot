@@ -3,145 +3,430 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ECU Copilot</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<title>ECU Copilot · Untersuchung</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
-  :root { --bg:#f6f7f9; --card:#fff; --ink:#1b1f24; --muted:#5b6470; --line:#e3e6ea; --accent:#0b5fff; --fail:#d6453d; --ok:#1e9e5a; }
-  @media (prefers-color-scheme: dark) { :root { --bg:#121417; --card:#1b1f24; --ink:#e8eaed; --muted:#9aa3ad; --line:#2a3038; } }
-  * { box-sizing:border-box } body { margin:0; font:14px/1.45 system-ui, sans-serif; background:var(--bg); color:var(--ink) }
-  header { padding:14px 20px; border-bottom:1px solid var(--line); display:flex; gap:16px; align-items:baseline; flex-wrap:wrap }
-  header h1 { font-size:18px; margin:0 } header .sub { color:var(--muted) } header a { color:var(--accent) }
-  main { display:grid; grid-template-columns: 1fr 1fr; gap:16px; padding:16px 20px; }
-  @media (max-width: 960px) { main { grid-template-columns: 1fr } }
-  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px 16px; }
-  .card h2 { font-size:14px; margin:0 0 10px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em }
-  .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center }
-  button { border:1px solid var(--line); background:var(--card); color:var(--ink); border-radius:8px; padding:7px 11px; cursor:pointer; font:inherit }
-  button:hover { border-color:var(--accent) } button.primary { background:var(--accent); color:#fff; border-color:var(--accent) }
-  button.danger { color:var(--fail) }
-  textarea { width:100%; min-height:64px; border:1px solid var(--line); border-radius:8px; padding:10px; font:inherit; background:var(--bg); color:var(--ink); resize:vertical }
-  table { width:100%; border-collapse:collapse; font-size:13px } th, td { text-align:left; padding:5px 6px; border-bottom:1px solid var(--line) } th { color:var(--muted); font-weight:600 }
-  td.num { text-align:right; font-variant-numeric:tabular-nums }
-  .rate-hi { color:var(--fail); font-weight:600 } .rate-ok { color:var(--ok) }
-  .answer { white-space:pre-wrap; line-height:1.5 } .answer:empty::before { content:"Stell eine Frage – z. B. „Warum fällt Variante B an Station 2 seit 10 Minuten durch?“"; color:var(--muted) }
-  .tool { border-left:3px solid var(--accent); padding:6px 10px; margin:6px 0; background:var(--bg); border-radius:6px; font-size:12.5px }
-  .tool code { color:var(--muted) } .tool pre { margin:4px 0 0; white-space:pre-wrap; color:var(--muted); max-height:90px; overflow:auto }
-  .kpis { display:grid; grid-template-columns: repeat(auto-fit, minmax(110px,1fr)); gap:8px } .kpi { background:var(--bg); border-radius:8px; padding:8px 10px }
-  .kpi b { display:block; font-size:18px } .kpi span { color:var(--muted); font-size:12px }
-  .status { font-size:12px; color:var(--muted) } .busy { opacity:.6 } .warn { color:var(--fail) }
-  .faults span { display:inline-block; background:var(--bg); border:1px solid var(--line); border-radius:999px; padding:2px 10px; margin:2px 4px 2px 0; font-size:12px }
+  :root {
+    --ground:#eef0f2; --card:#ffffff; --ink:#1a1d21; --muted:#5d6670; --line:#d5d9de; --line-soft:#e3e6ea;
+    --dark:#15181c; --dark-line:#262b31; --dark-ink:#d8dde3; --dark-muted:#8b95a1;
+    --signal:#d9531e; --signal-soft:#fdebe2; --amber:#f0a35c; --cite:#1f4e9c; --ok:#1e7a4a; --ok-soft:#e4f1ea; --warn-soft:#fff4e5;
+    --mono:'IBM Plex Mono', ui-monospace, monospace; --sans:'IBM Plex Sans', system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--ground); color: var(--ink); font: 14px/1.45 var(--sans); }
+  button { font: inherit; cursor: pointer; }
+  a { color: var(--cite); }
+  .mono { font-family: var(--mono); }
+  .label { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+  .muted { color: var(--muted); }
+
+  header.top { height: 56px; background: var(--card); border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 24px; padding: 0 32px; }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand .mark { width: 22px; height: 22px; border: 2px solid var(--ink); border-radius: 2px; display: grid; place-items: center; }
+  .brand .mark i { display: block; width: 8px; height: 8px; background: var(--ink); }
+  .brand b { font-weight: 600; font-size: 15px; }
+  nav.tabs { display: flex; gap: 22px; margin-left: 8px; height: 56px; }
+  nav.tabs a { color: var(--muted); text-decoration: none; display: flex; align-items: center; border-bottom: 2px solid transparent; font-size: 13px; }
+  nav.tabs a.on { color: var(--ink); font-weight: 500; border-color: var(--ink); }
+  .top .right { margin-left: auto; display: flex; align-items: center; gap: 18px; font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  .sel { display: flex; border: 1px solid var(--line); border-radius: 2px; overflow: hidden; }
+  .sel button { background: var(--card); border: 0; border-right: 1px solid var(--line); padding: 6px 10px; font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  .sel button:last-child { border-right: 0; } .sel button.on { background: var(--ink); color: #fff; }
+  .case { display: inline-flex; align-items: center; gap: 6px; } .case i { width: 8px; height: 8px; border-radius: 50%; background: #9aa3ad; }
+  .case.open { color: #b4400f; } .case.open i { background: var(--signal); }
+  .sim { border: 1px solid var(--line); border-radius: 2px; padding: 2px 8px; font-size: 11px; letter-spacing: .04em; }
+
+  section.signal { background: var(--dark); color: var(--dark-ink); padding: 18px 32px 14px; border-bottom: 1px solid #0b0d10; }
+  .signal .row { display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap; }
+  .signal .title { font-family: var(--mono); font-size: 12px; color: var(--dark-muted); letter-spacing: .08em; text-transform: uppercase; }
+  .readouts { margin-left: auto; display: flex; gap: 26px; font-family: var(--mono); font-size: 12px; }
+  .readouts span b { font-weight: 500; color: var(--dark-ink); } .readouts .k { color: var(--dark-muted); margin-right: 6px; }
+  .readouts .hot { color: var(--amber); }
+  .chartwrap { position: relative; margin-top: 8px; }
+  svg.chart { display: block; width: 100%; height: 210px; }
+  svg.chart text { font-family: var(--mono); font-size: 10px; fill: #6e7883; }
+  .tip { position: absolute; top: 10px; left: 0; pointer-events: none; background: #0b0d10; border: 1px solid var(--dark-line); padding: 6px 10px; font-family: var(--mono); font-size: 11px; color: var(--dark-ink); white-space: nowrap; display: none; }
+  .legend { display: flex; gap: 18px; margin-top: 6px; font-family: var(--mono); font-size: 11px; color: var(--dark-muted); flex-wrap: wrap; align-items: center; }
+  .legend i { display: inline-block; width: 14px; height: 2px; vertical-align: middle; margin-right: 6px; }
+  .legend .sq { width: 7px; height: 7px; }
+  .legend .win { margin-left: auto; } .legend .win button { background: transparent; color: var(--dark-muted); border: 1px solid var(--dark-line); padding: 3px 8px; font-family: var(--mono); font-size: 11px; }
+  .legend .win button.on { color: var(--dark-ink); border-color: var(--dark-muted); }
+
+  main.work { display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr); gap: 24px; padding: 24px 32px; }
+  @media (max-width: 1100px) { main.work { grid-template-columns: 1fr; } }
+  .card { background: var(--card); border: 1px solid var(--line); display: flex; flex-direction: column; min-width: 0; }
+  .card > .head { display: flex; align-items: baseline; gap: 12px; padding: 16px 20px 0; flex-wrap: wrap; }
+  .card h2 { margin: 0; font-size: 15px; font-weight: 600; }
+
+  svg.schem { display: block; width: 100%; height: auto; margin-top: 6px; }
+  svg.schem text { font-family: var(--mono); font-size: 10px; fill: var(--muted); }
+  svg.schem .comp { cursor: pointer; }
+  svg.schem .comp rect, svg.schem .comp circle { fill: #fff; stroke: var(--ink); stroke-width: 1.5; transition: stroke .2s, fill .2s; }
+  svg.schem .comp text.n { fill: var(--ink); font-size: 11px; }
+  svg.schem .comp:hover rect, svg.schem .comp:hover circle { stroke: var(--cite); }
+  svg.schem .comp.hot rect, svg.schem .comp.hot circle { fill: var(--signal-soft); stroke: var(--signal); stroke-width: 2; }
+  svg.schem .comp.sel rect, svg.schem .comp.sel circle { stroke: var(--cite); stroke-width: 2; }
+  svg.schem .wire { stroke: #8b95a1; stroke-width: 1.5; fill: none; transition: stroke .2s; } svg.schem .wire.hot { stroke: var(--signal); stroke-width: 2; }
+  svg.schem .frame { fill: none; stroke: #c9cfd6; stroke-dasharray: 6 4; }
+  .compinfo { border-top: 1px solid var(--line-soft); padding: 12px 20px; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 14px; align-items: center; min-height: 64px; font-size: 13px; }
+  .compinfo .pn { font-family: var(--mono); font-size: 12px; }
+  .status { font-family: var(--mono); font-size: 11px; padding: 2px 8px; border: 1px solid var(--line); border-radius: 2px; white-space: nowrap; }
+  .status.active { color: var(--ok); border-color: var(--ok); } .status.end_of_life { color: #b4400f; border-color: var(--signal); } .status.qualification_in_progress { color: #9a5b00; border-color: #e0a84a; }
+  .tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--line); margin-top: auto; }
+  .tile { padding: 14px 20px; border-right: 1px solid var(--line-soft); } .tile:last-child { border-right: 0; }
+  .tile .v { font-family: var(--mono); font-size: 22px; margin-top: 4px; } .tile .v small { font-size: 13px; color: var(--muted); margin-left: 4px; }
+  .tile .v.hot { color: #b4400f; } .tile .sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  .ask { padding: 14px 20px 0; display: flex; flex-direction: column; gap: 8px; }
+  textarea { width: 100%; min-height: 58px; border: 1px solid var(--line); border-radius: 2px; padding: 9px 11px; font: inherit; background: #fafbfc; color: var(--ink); resize: vertical; }
+  textarea:focus { outline: 2px solid var(--cite); outline-offset: -1px; }
+  .askrow { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .btn { padding: 9px 14px; min-height: 40px; border: 1px solid var(--ink); background: var(--card); color: var(--ink); border-radius: 2px; }
+  .btn.primary { background: var(--ink); color: #fff; } .btn.ghost { border-color: var(--line); color: var(--muted); } .btn:disabled { opacity: .5; cursor: default; }
+  .chip { padding: 6px 10px; border: 1px solid var(--line); background: var(--card); border-radius: 2px; font-size: 12px; color: var(--muted); }
+  .chip:hover { border-color: var(--ink); color: var(--ink); }
+  .busy { font-size: 12px; color: var(--muted); display: inline-flex; align-items: center; gap: 8px; }
+  .busy i { width: 10px; height: 10px; border: 2px solid var(--line); border-top-color: var(--ink); border-radius: 50%; animation: spin .9s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .inv { padding: 14px 20px 18px; display: flex; flex-direction: column; gap: 14px; }
+  .steps { display: flex; flex-direction: column; gap: 0; border-top: 1px solid var(--line-soft); }
+  .step { display: grid; grid-template-columns: 22px 150px minmax(0, 1fr) 60px; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--line-soft); font-size: 12.5px; align-items: baseline; }
+  .step .n { font-family: var(--mono); color: var(--muted); } .step .t { font-family: var(--mono); } .step .s { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .step .d { font-family: var(--mono); color: var(--muted); text-align: right; } .step.pending .s { color: #9aa3ad; }
+  .hyp { display: grid; grid-template-columns: 34px minmax(0, 1fr) 118px; gap: 12px; align-items: start; padding: 10px 12px; border: 1px solid var(--line); margin-bottom: 8px; }
+  .hyp.strong { border-color: var(--ink); } .hyp.rejected { color: var(--muted); }
+  .hyp .n { font-family: var(--mono); font-size: 12px; } .hyp .r { font-size: 12.5px; color: var(--muted); margin-top: 3px; }
+  .sup { font-family: var(--mono); font-size: 11px; text-align: right; padding: 2px 6px; border-radius: 2px; }
+  .sup.strong { background: var(--ok-soft); color: var(--ok); } .sup.moderate { background: var(--warn-soft); color: #9a5b00; } .sup.weak { background: #f1f3f5; color: var(--muted); } .sup.rejected { background: #f1f3f5; color: var(--muted); text-decoration: line-through; }
+  table.ev { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.ev td { padding: 7px 0; border-top: 1px solid var(--line-soft); vertical-align: top; } table.ev tr:last-child td { border-bottom: 1px solid var(--line-soft); }
+  table.ev td.n { width: 26px; font-family: var(--mono); color: var(--muted); } table.ev td.c { text-align: right; white-space: nowrap; padding-left: 10px; }
+  table.ev tr.cur td { background: #f6f8fb; }
+  .src { font-family: var(--mono); font-size: 11px; padding: 1px 6px; border-radius: 2px; border: 1px solid var(--line); color: var(--muted); margin-right: 6px; }
+  .src.live { color: #0d6b57; border-color: #9fd3c3; } .src.document { color: var(--cite); border-color: #b9cbe8; }
+  .cite { font-family: var(--mono); font-size: 12px; color: var(--cite); }
+  .next { border: 1px solid var(--line); background: #f4f6f8; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; }
+  .next b { font-weight: 500; } .next .meta { font-size: 12px; color: var(--muted); }
+  .decide { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .decide input { font: inherit; border: 1px solid var(--line); padding: 8px 10px; border-radius: 2px; min-width: 160px; }
+  .metaline { font-size: 12px; color: var(--muted); display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
+  .metaline b { color: var(--ink); font-weight: 500; }
+  .flag { color: #b4400f; }
+  details.ans summary { cursor: pointer; font-size: 12px; color: var(--muted); } details.ans .md { white-space: pre-wrap; font-size: 13px; margin-top: 8px; padding: 10px 12px; border: 1px solid var(--line-soft); background: #fafbfc; }
+  .empty { color: #9aa3ad; font-size: 13px; padding: 6px 0; }
+
+  footer.ops { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr); gap: 24px; padding: 0 32px 32px; }
+  @media (max-width: 1100px) { footer.ops { grid-template-columns: 1fr; } }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); } .kpi { padding: 12px 16px; border-right: 1px solid var(--line-soft); }
+  .kpi b { display: block; font-family: var(--mono); font-size: 18px; font-weight: 500; } .kpi span { font-size: 11px; color: var(--muted); }
+  .faults { padding: 12px 20px 16px; display: flex; flex-direction: column; gap: 10px; }
+  .faults .row { display: flex; gap: 8px; flex-wrap: wrap; } .faults .danger { color: #b4400f; }
+  .active { font-size: 12px; color: var(--muted); } .active span { display: inline-block; border: 1px solid var(--line); border-radius: 2px; padding: 1px 8px; margin: 2px 4px 0 0; font-family: var(--mono); }
+  .log { padding: 8px 20px 14px; font-size: 12.5px; } .log div { padding: 6px 0; border-top: 1px solid var(--line-soft); display: flex; gap: 10px; } .log .mono { color: var(--muted); }
 </style>
 </head>
 <body>
-<header>
-  <h1>ECU Copilot</h1>
-  <span class="sub">EOL-Prüfline DCU-A1 / DCU-B2 · Digital Twin + Agent</span>
-  <span class="sub" id="cfg"></span>
-  <a id="jaeger" href="#" target="_blank" rel="noopener">Traces (Jaeger) ↗</a>
+
+<header class="top">
+  <div class="brand"><span class="mark"><i></i></span><b>ECU Copilot</b><span class="muted" style="font-size:13px">Türantrieb DCU · EOL-Linie</span></div>
+  <nav class="tabs"><a href="#" class="on">Untersuchung</a><a href="http://localhost:8001/docs" id="navTwin" target="_blank" rel="noopener">Linie (API)</a><a href="#" id="navJaeger" target="_blank" rel="noopener">Traces</a></nav>
+  <div class="right">
+    <div class="sel" id="groupSel" aria-label="Station und Variante"></div>
+    <span class="case" id="case"><i></i>Beobachtung</span>
+    <span class="sim" title="Alle Prüfdaten stammen aus dem Digital Twin (Simulation). Dokumente sind synthetisch, aber in sich konsistent.">SIMULATION</span>
+    <span id="cfg"></span>
+    <span id="clock"></span>
+  </div>
 </header>
-<main>
+
+<section class="signal">
+  <div class="row">
+    <div class="title" id="sigTitle">Signal · Ruhestrom I<sub>q</sub> und Stationstemperatur T1</div>
+    <div class="readouts" id="readouts"></div>
+  </div>
+  <div class="chartwrap">
+    <svg class="chart" id="chart" viewBox="0 0 1376 210" preserveAspectRatio="none" role="img" aria-label="Ruhestrom und Temperatur über Zeit mit Limit und Fehlermarkern"></svg>
+    <div class="tip" id="tip"></div>
+  </div>
+  <div class="legend">
+    <span><i style="background:#9fb4c9"></i>I<sub>q</sub> Mittel je Intervall (µA)</span>
+    <span><i style="background:#f0a35c"></i>T1 (°C, rechte Achse)</span>
+    <span><i style="background:#d9531e; height:1px"></i>Limit I<sub>q</sub></span>
+    <span><i class="sq" style="background:#d9531e"></i>E-204</span><span><i class="sq" style="background:#e8e8e8"></i>andere Fehlercodes</span>
+    <span><i style="background:#f0a35c; opacity:.35; height:10px"></i>T1 außerhalb 18–32 °C</span>
+    <span class="win">Fenster <button data-min="30" class="on">30 min</button> <button data-min="60">60 min</button> <button data-min="120">2 h</button></span>
+  </div>
+</section>
+
+<main class="work">
   <section class="card">
-    <h2>Prüfstände – Ausfallrate, letzte 10 Minuten (live)</h2>
-    <canvas id="chart" height="150"></canvas>
-    <table id="stats"><thead><tr><th>Station</th><th>Var.</th><th class="num">geprüft</th><th class="num">Ausfall %</th><th>Codes</th><th class="num">T °C</th><th class="num">Lärm dB</th><th class="num">I_q µA</th></tr></thead><tbody></tbody></table>
-    <div class="row" style="margin-top:10px">
-      <span class="status">Störung injizieren:</span>
-      <button onclick="fault({type:'temperature_drift',station:2,delta_c:10,ramp_s:60})">Temperaturdrift St. 2</button>
-      <button onclick="fault({type:'acoustic_noise',station:3,noise_db:57})">Hallenlärm St. 3</button>
-      <button onclick="fault({type:'bad_lot',variant:'B',lot:'L2439-07',fail_rate:0.15})">Schlechtes Los (LIN)</button>
-      <button class="danger" onclick="clearFaults()">Alle Störungen aufheben</button>
-    </div>
-    <div class="faults status" id="faults" style="margin-top:8px"></div>
+    <div class="head"><h2>Betroffene Komponente</h2><span class="mono muted" style="font-size:12px" id="schemSub">DCU-B2 · Rev. D</span><span class="muted" style="margin-left:auto; font-size:12px">Komponente anklicken · Fehlerpfad nach Fehlercode</span></div>
+    <svg class="schem" id="schem" viewBox="0 0 680 400" role="img" aria-label="Schematik des elektrischen Türantriebs: Steuergerät mit Mikrocontroller, LIN-Transceiver, H-Brücke, Antennen-Front-End und Steckverbinder; Motor, Getriebe, Fensterheber; Prüfzelle mit Temperatursensor, Mikrofon und Lastaufnahme">
+      <rect class="frame" x="16" y="30" width="648" height="356"></rect>
+      <text x="24" y="48">EOL-PRÜFZELLE (schallgedämmt) · Station <tspan id="schemStation">2</tspan></text>
+      <!-- station equipment -->
+      <g class="comp" data-comp="T1"><circle cx="84" cy="352" r="12"></circle><text class="n" x="78" y="356">T1</text><text x="104" y="348" id="t1val">— °C</text><text x="104" y="362">Stationssensor · gültig 18–32 °C</text></g>
+      <g class="comp" data-comp="MIC"><rect x="560" y="56" width="70" height="24"></rect><text class="n" x="567" y="72">MIC</text><text x="560" y="94">Zellenmikrofon</text><text x="560" y="106" id="micval">— dB(A) · ≤ 45</text></g>
+      <g class="comp" data-comp="SERVICE_IF"><rect x="300" y="332" width="110" height="26"></rect><text class="n" x="308" y="349">Service-IF</text><text x="300" y="374">Flash · Verify</text></g>
+      <g class="comp" data-comp="FIXTURE"><rect x="430" y="332" width="110" height="26"></rect><text class="n" x="438" y="349">Lastaufnahme</text><text x="430" y="374">Motor-Fixture · 12 V</text></g>
+      <!-- vehicle side: window regulator -->
+      <path d="M520 110 C 572 170, 572 290, 520 330" fill="none" stroke="#9aa3ad" stroke-width="3"></path>
+      <rect x="496" y="200" width="48" height="26" fill="none" stroke="#5d6670" stroke-width="1.5"></rect><text x="506" y="217">Glas</text>
+      <text x="548" y="250">Fensterheber</text>
+      <g class="comp" data-comp="GEAR"><rect x="452" y="214" width="34" height="36"></rect><text class="n" x="456" y="236">Getr.</text></g>
+      <g class="comp" data-comp="MOTOR"><rect x="380" y="202" width="70" height="60"></rect><circle cx="415" cy="232" r="18"></circle><text class="n" x="410" y="236">M</text></g>
+      <path class="wire" data-w="MOTOR-GEAR" d="M450 232 H452"></path>
+      <path class="wire" data-w="GEAR-RAIL" d="M486 232 H518"></path>
+      <text x="380" y="282">DC-Motor · Schneckengetriebe</text>
+      <!-- PCB -->
+      <rect x="60" y="80" width="280" height="232" fill="#f8f9fa" stroke="#1a1d21" stroke-width="1.5"></rect>
+      <text x="68" y="98" style="fill:#1a1d21">DCU-B2 · LEITERPLATTE</text>
+      <g class="comp" data-comp="U1"><rect x="80" y="118" width="92" height="64"></rect><text class="n" x="88" y="136">U1 · MCU</text><text x="88" y="151">XM32-F7 · Gr. 1</text><text x="88" y="166" id="u1note">Sleep ↑ 3.5 %/K</text></g>
+      <g class="comp" data-comp="U7"><rect x="200" y="118" width="120" height="44"></rect><text class="n" x="208" y="136">U7 · H-Brücke</text><text x="208" y="151">HB4821 · PCN-2026-017</text></g>
+      <g class="comp" data-comp="U12"><rect x="200" y="180" width="120" height="40"></rect><text class="n" x="208" y="197">U12 · LF-Antenne</text><text x="208" y="211">Polling +90 µA (nur B)</text></g>
+      <g class="comp" data-comp="U3"><rect x="80" y="200" width="92" height="36"></rect><text class="n" x="88" y="216">U3 · LIN-TRX</text><text x="88" y="229">19.2 kbit/s</text></g>
+      <g class="comp" data-comp="J3"><rect x="80" y="258" width="120" height="30"></rect><text class="n" x="88" y="277">J3 · Stecker</text><text x="140" y="277">LIN 5/6 · 12 V 1/2</text></g>
+      <!-- wires -->
+      <path class="wire" data-w="J3-U3" d="M126 258 V236"></path>
+      <path class="wire" data-w="U3-U1" d="M126 200 V182"></path>
+      <path class="wire" data-w="U1-U7" d="M172 150 H200"></path>
+      <path class="wire" data-w="U1-U12" d="M172 170 H186 V200 H200"></path>
+      <path class="wire" data-w="U7-MOTOR" d="M320 140 H350 V232 H380"></path>
+      <path class="wire" data-w="LIN" d="M80 273 H30 V330"></path><text x="22" y="344">LIN · Fzg.</text>
+      <path class="wire" data-w="U1-SERVICE" d="M126 182 V300 H300 V332" style="stroke-dasharray:3 3"></path>
+      <path class="wire" data-w="FIXTURE-MOTOR" d="M485 332 V262"></path>
+      <path class="wire" data-w="T1-PCB" d="M84 340 V312" style="stroke-dasharray:3 3"></path>
+    </svg>
+    <div class="compinfo" id="compinfo"><span class="pn muted">Keine Komponente gewählt</span><span class="muted">Klick auf ein Bauteil zeigt Teilenummer, Lebenszyklus und Hinweise aus der Stückliste.</span><span></span></div>
+    <div class="tiles" id="tiles"></div>
   </section>
 
   <section class="card">
-    <h2>Frage an den Copilot</h2>
-    <textarea id="q">Warum fällt Variante B an Station 2 seit 10 Minuten überdurchschnittlich oft durch? Ist das ein echter Fehler oder ein Pseudo-Fehler?</textarea>
-    <div class="row" style="margin-top:8px">
-      <button class="primary" id="askBtn" onclick="ask()">Fragen</button>
-      <button onclick="setQ('Welche Ruhestrom-Grenze gilt für Variante B und bei welcher Temperatur ist die Messung gültig?')">Beispiel: Spezifikation</button>
-      <button onclick="setQ('Der Treiber-IC auf U7 soll abgekündigt sein. Was ist der Ersatz, bis wann muss bestellt werden, und was muss die Software prüfen?')">Beispiel: Abkündigung</button>
-      <button onclick="setQ('Erstelle einen 8D-Report-Entwurf für die aktuelle Auffälligkeit an Station 2.')">Beispiel: 8D</button>
-      <span class="status" id="askStatus"></span>
+    <div class="head"><h2>Untersuchung</h2><span class="muted" style="font-size:12px" id="invSub">Agent mit Werkzeugen · Belege mit Quelle · Freigabe durch den Ingenieur</span></div>
+    <div class="ask">
+      <textarea id="q">Warum fällt Variante B an Station 2 seit 10 Minuten überdurchschnittlich oft durch? Ist das ein echter Fehler oder ein Pseudo-Fehler?</textarea>
+      <div class="askrow">
+        <button class="btn primary" id="askBtn">Untersuchen</button>
+        <button class="chip" data-q="Welche Ruhestrom-Grenze gilt für Variante B und bei welcher Temperatur ist die Messung gültig?">Spezifikation</button>
+        <button class="chip" data-q="Der Treiber-IC auf U7 soll abgekündigt sein. Was ist der Ersatz, bis wann muss bestellt werden, und was muss die Software prüfen?">Abkündigung</button>
+        <button class="chip" data-q="An Station 3 steigt die Ausfallrate. Was ist los und was soll der Werker zuerst prüfen?">Station 3</button>
+        <button class="chip" data-q="Es häufen sich E-120-Fehler bei Variante B. Ist das ein Umgebungsproblem oder ein echter Fehler? Welches Los ist betroffen?">E-120 / Los</button>
+        <span class="busy" id="busy" hidden><i></i><span id="busyText">Agent arbeitet …</span></span>
+      </div>
     </div>
-    <div class="answer" id="answer" style="margin-top:12px"></div>
-    <div id="tools" style="margin-top:10px"></div>
-    <div class="status" id="meta" style="margin-top:8px"></div>
-  </section>
-
-  <section class="card" style="grid-column: 1 / -1">
-    <h2>Betrieb – Kosten, Latenz, Qualität (alle Fragen dieses Service)</h2>
-    <div class="kpis" id="kpis"></div>
-    <table id="recent" style="margin-top:10px"><thead><tr><th>Zeit</th><th>Frage</th><th>Tools</th><th class="num">Iter.</th><th class="num">Tokens in/out</th><th class="num">Cache</th><th class="num">$</th><th class="num">s</th><th>Hinweis</th></tr></thead><tbody></tbody></table>
+    <div class="inv">
+      <div><div class="label">Aktivität des Agenten</div><div class="steps" id="steps"><div class="empty">Noch keine Untersuchung. Störung injizieren (unten), 2–3 Minuten warten, dann fragen.</div></div></div>
+      <div><div class="label">Hypothesen</div><div id="hyps"><div class="empty">—</div></div></div>
+      <div><div class="label">Belege</div><table class="ev"><tbody id="ev"><tr><td class="empty">—</td></tr></tbody></table></div>
+      <div><div class="label">Vorgeschlagener nächster Test</div><div class="next" id="next"><span class="empty">—</span></div></div>
+      <div class="decide" id="decide">
+        <button class="btn primary" data-d="approve_test" disabled>Test freigeben</button>
+        <button class="btn" data-d="block_units" disabled>Einheiten sperren</button>
+        <button class="btn ghost" data-d="reject" disabled>Ablehnen</button>
+        <input id="engineer" placeholder="Name · Rolle" value="M. Molaei · Test Engineering">
+        <span class="muted" style="font-size:12px" id="decided"></span>
+      </div>
+      <details class="ans"><summary>Antwort als Text (für Protokoll / E-Mail)</summary><div class="md" id="answer">—</div></details>
+      <div class="metaline" id="meta"></div>
+    </div>
   </section>
 </main>
+
+<footer class="ops">
+  <section class="card"><div class="head"><h2>Betrieb</h2><span class="muted" style="font-size:12px">alle Fragen dieses Service</span></div><div class="kpis" id="kpis"></div></section>
+  <section class="card"><div class="head"><h2>Simulation</h2><span class="muted" style="font-size:12px">Störungen in den Digital Twin injizieren</span></div>
+    <div class="faults">
+      <div class="row">
+        <button class="chip" data-f='{"type":"temperature_drift","station":2,"delta_c":10,"ramp_s":60}'>Temperaturdrift St. 2</button>
+        <button class="chip" data-f='{"type":"acoustic_noise","station":3,"noise_db":57}'>Hallenlärm St. 3</button>
+        <button class="chip" data-f='{"type":"bad_lot","variant":"B","lot":"L2439-07","fail_rate":0.15}'>Schlechtes Los (LIN)</button>
+        <button class="chip danger" id="clearFaults">Alle aufheben</button>
+      </div>
+      <div class="active" id="active">—</div>
+    </div></section>
+  <section class="card"><div class="head"><h2>Freigaben</h2><span class="muted" style="font-size:12px">mit Trace-ID protokolliert</span></div><div class="log" id="declog"><div class="empty">—</div></div></section>
+</footer>
+
 <script>
-let CFG = {twin_url: 'http://localhost:8001', jaeger_url: 'http://localhost:16686'};
-const series = {}; // "2/B" -> [{x,y}]
-const colors = {'1/A':'#0b5fff','2/A':'#5b8def','2/B':'#d6453d','3/B':'#e08a2e'};
-let chart;
+const S = { cfg:{twin_url:'http://localhost:8001', jaeger_url:'http://localhost:16686'}, group:{station:2, variant:'B'}, minutes:30, series:null, stats:null, cursor:null, report:null, last:null, bom:[], selComp:null, codeHot:null };
+const GROUPS = [{station:1,variant:'A'},{station:2,variant:'A'},{station:2,variant:'B'},{station:3,variant:'B'}];
+const PATHS = { 'E-204':{comps:['T1','U1','U12'],wires:['T1-PCB','U1-U12']}, 'E-310':{comps:['MIC','GEAR','MOTOR'],wires:['MOTOR-GEAR','GEAR-RAIL']}, 'E-120':{comps:['J3','U3'],wires:['LIN','J3-U3','U3-U1']}, 'E-205':{comps:['U7','MOTOR','FIXTURE'],wires:['U1-U7','U7-MOTOR','FIXTURE-MOTOR']}, 'E-401':{comps:['SERVICE_IF','U1'],wires:['U1-SERVICE']} };
+const COMP = { U1:{name:'U1 · Mikrocontroller', pn:'XM32F7-512-LQ64-G1'}, U3:{name:'U3 · LIN-Transceiver', pn:'LIN-TRX-TJA1x'}, U7:{name:'U7 · H-Brücken-Treiber', pn:'HB4821-QHTS28'}, U12:{name:'U12 · Antennen-Front-End', pn:'ANT-FE-KE2'}, J3:{name:'J3 · Fahrzeugstecker', pn:'CON-J3-12P-PF'}, T1:{name:'T1 · Stationstemperatur', note:'Sensor der Prüfstation, nicht Teil des Geräts. Messung nur gültig 18–32 °C (TS-DCU-EOL §4.2).'}, MIC:{name:'Zellenmikrofon', note:'Referenzmikrofon der Akustikzelle. Test nur gültig ≤ 45 dB(A) (TS-DCU-EOL §6.1).'}, MOTOR:{name:'DC-Motor Fensterheber', note:'Nennlauf 1.0–2.4 A bei 12 V (TS-DCU-EOL §5).'}, GEAR:{name:'Schneckengetriebe', note:'Regelmäßiges Klacken = Defekt; Hallenlärm = unregelmäßig (TS-DCU-EOL §6.2).'}, FIXTURE:{name:'Motor-Lastaufnahme', note:'Fixture der Station; Defekt zeigt sich als E-205 über alle Varianten (WI-EOL-PSEUDO §3).'}, SERVICE_IF:{name:'Service-Schnittstelle', note:'Flash + Verify; Timeout = E-401. Kabel zuerst prüfen (TS-DCU-EOL §7).'} };
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const fmtT = iso => new Date(iso).toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit'});
+const limitFor = v => (S.series?.limits?.quiescent_max_ua?.[v]) ?? (v==='A'?350:450);
+const nominal = v => v==='A' ? 240 : 330;  // typical at 25 °C (TS-DCU-EOL §5)
+const expected = (v, t) => Math.round(nominal(v) * (1 + 0.03 * Math.max(0, t - 25)));
 
 async function init() {
-  try { CFG = await (await fetch('/config')).json(); } catch {}
-  document.getElementById('cfg').textContent = `${CFG.provider} · ${CFG.model} · RAG ${CFG.rag_mode}`;
-  document.getElementById('jaeger').href = CFG.jaeger_url + '/search?service=ecu-copilot';
-  chart = new Chart(document.getElementById('chart'), {
-    type: 'line', data: { datasets: [] },
-    options: { animation: false, responsive: true, scales: { x: { type: 'linear', ticks: { callback: v => new Date(v).toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit', second:'2-digit'}) } }, y: { min: 0, title: { display: true, text: 'Ausfallrate % (10-min-Fenster)' } } }, plugins: { legend: { position: 'bottom' } } }
-  });
-  poll(); setInterval(poll, 3000); refreshMetrics(); setInterval(refreshMetrics, 10000);
+  try { S.cfg = await (await fetch('/config')).json(); } catch {}
+  $('cfg').textContent = `${S.cfg.provider} · ${S.cfg.model}`;
+  $('navJaeger').href = S.cfg.jaeger_url + '/search?service=ecu-copilot';
+  $('navTwin').href = S.cfg.twin_url + '/docs';
+  try { S.bom = (await (await fetch('/bom')).json()).parts || []; } catch {}
+  $('groupSel').innerHTML = GROUPS.map(g => `<button data-s="${g.station}" data-v="${g.variant}">EOL-${g.station} · ${g.variant}</button>`).join('');
+  $('groupSel').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.group = {station:+b.dataset.s, variant:b.dataset.v}; S.cursor = null; renderGroupSel(); poll(); });
+  document.querySelectorAll('.legend .win button').forEach(b => b.addEventListener('click', () => { S.minutes = +b.dataset.min; document.querySelectorAll('.legend .win button').forEach(x => x.classList.toggle('on', x===b)); poll(); }));
+  document.querySelectorAll('.chip[data-q]').forEach(b => b.addEventListener('click', () => { $('q').value = b.dataset.q; }));
+  document.querySelectorAll('.chip[data-f]').forEach(b => b.addEventListener('click', () => fault(JSON.parse(b.dataset.f))));
+  $('clearFaults').addEventListener('click', clearFaults);
+  $('askBtn').addEventListener('click', ask);
+  $('decide').addEventListener('click', e => { const b = e.target.closest('button[data-d]'); if (b && !b.disabled) decide(b.dataset.d); });
+  document.querySelectorAll('#schem .comp').forEach(g => g.addEventListener('click', () => selectComp(g.dataset.comp)));
+  $('chart').addEventListener('mousemove', onCursor); $('chart').addEventListener('mouseleave', () => { S.cursor = null; renderCursor(); });
+  renderGroupSel(); tick(); setInterval(tick, 1000); poll(); setInterval(poll, 4000); refreshOps(); setInterval(refreshOps, 12000);
 }
+function tick() { $('clock').textContent = new Date().toLocaleString('de-DE', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit'}); }
+function renderGroupSel() { document.querySelectorAll('#groupSel button').forEach(b => b.classList.toggle('on', +b.dataset.s===S.group.station && b.dataset.v===S.group.variant)); $('schemStation').textContent = S.group.station; $('schemSub').textContent = `DCU-${S.group.variant==='A'?'A1':'B2'} · Rev. D`; }
 
 async function poll() {
+  const {station, variant} = S.group;
   try {
-    const s = await (await fetch(`${CFG.twin_url}/stats?minutes=10`)).json();
-    const now = Date.now();
-    const tb = document.querySelector('#stats tbody'); tb.innerHTML = '';
-    for (const g of s.groups) {
-      const key = `${g.station}/${g.variant}`;
-      (series[key] ||= []).push({x: now, y: g.failure_rate_pct});
-      if (series[key].length > 200) series[key].shift();
-      const codes = Object.entries(g.failure_codes).map(([c,n]) => `${c}:${n}`).join(' ');
-      const cls = g.failure_rate_pct >= 5 ? 'rate-hi' : 'rate-ok';
-      tb.insertAdjacentHTML('beforeend', `<tr><td>EOL-${g.station}</td><td>${g.variant}</td><td class="num">${g.tested}</td><td class="num ${cls}">${g.failure_rate_pct.toFixed(1)}</td><td>${codes||'–'}</td><td class="num ${g.mean_board_temp_c>32?'warn':''}">${g.mean_board_temp_c}</td><td class="num ${g.mean_ambient_noise_db>45?'warn':''}">${g.mean_ambient_noise_db}</td><td class="num">${g.mean_quiescent_current_ua}</td></tr>`);
-    }
-    chart.data.datasets = Object.keys(series).sort().map(k => ({label: `EOL-${k.replace('/', ' Var. ')}`, data: series[k], borderColor: colors[k] || '#888', borderWidth: 2, pointRadius: 0, tension: .25}));
-    chart.update();
-    const f = await (await fetch(`${CFG.twin_url}/faults`)).json();
-    document.getElementById('faults').innerHTML = f.length ? 'Aktive Störungen: ' + f.map(a => `<span>#${a.id} ${a.fault.type} ${a.fault.station ? 'St. '+a.fault.station : a.fault.lot}</span>`).join('') : 'Keine aktive Störung.';
-  } catch (e) { document.getElementById('faults').textContent = 'Twin nicht erreichbar: ' + e; }
+    const [stats, series, faults] = await Promise.all([
+      fetch(`${S.cfg.twin_url}/stats?minutes=10`).then(r => r.json()),
+      fetch(`${S.cfg.twin_url}/series?station=${station}&variant=${variant}&minutes=${S.minutes}&bucket_s=${S.minutes>=120?120:S.minutes>=60?60:20}`).then(r => r.json()),
+      fetch(`${S.cfg.twin_url}/faults`).then(r => r.json()),
+    ]);
+    S.stats = stats; S.series = series;
+    const g = stats.groups.find(x => x.station===station && x.variant===variant);
+    const open = stats.groups.some(x => x.failure_rate_pct >= 5);
+    $('case').className = 'case' + (open ? ' open' : ''); $('case').lastChild.textContent = open ? 'Fall offen · Rate ≥ 5 %' : 'Beobachtung';
+    const dom = g ? Object.entries(g.failure_codes).sort((a,b) => b[1]-a[1])[0]?.[0] : null;
+    S.codeHot = S.report?.affected_components?.length ? null : dom;
+    renderReadouts(g); renderChart(); renderTiles(g); renderSchematic(g); renderActive(faults);
+  } catch (e) { $('readouts').innerHTML = `<span class="hot">Twin nicht erreichbar: ${esc(e.message)}</span>`; }
 }
-
-async function fault(body) { await fetch(`${CFG.twin_url}/faults`, {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(body)}); poll(); }
-async function clearFaults() { await fetch(`${CFG.twin_url}/faults`, {method:'DELETE'}); poll(); }
-function setQ(t) { document.getElementById('q').value = t; }
+function renderReadouts(g) {
+  const v = S.group.variant, lim = limitFor(v);
+  const last = (S.series?.buckets || []).at(-1);
+  const hotT = g && (g.mean_board_temp_c > 32 || g.mean_board_temp_c < 18), hotN = g && g.mean_ambient_noise_db > 45, hotR = g && g.failure_rate_pct >= 5;
+  $('readouts').innerHTML = g ? `
+    <span><span class="k">Limit ${v}</span><b>${lim} µA</b></span>
+    <span><span class="k">I<sub>q</sub> Mittel 10 min</span><b>${g.mean_quiescent_current_ua} µA</b></span>
+    <span><span class="k">T1</span><b class="${hotT?'hot':''}">${g.mean_board_temp_c} °C</b></span>
+    <span><span class="k">Lärm</span><b class="${hotN?'hot':''}">${g.mean_ambient_noise_db} dB(A)</b></span>
+    <span><span class="k">Fails 10 min</span><b class="${hotR?'hot':''}">${g.failure_rate_pct} %</b> <span class="k"></span>${Object.entries(g.failure_codes).map(([c,n]) => `${c}:${n}`).join(' ')||''}</span>
+    <span><span class="k">geprüft</span><b>${g.tested}</b></span>` : '<span class="k">keine Daten für diese Gruppe</span>';
+  $('t1val').textContent = (S.cursor?.board_temp_c ?? g?.mean_board_temp_c ?? '—') + ' °C';
+  $('micval').textContent = (g?.mean_ambient_noise_db ?? '—') + ' dB(A) · ≤ 45';
+}
+function renderTiles(g) {
+  const v = S.group.variant, lim = limitFor(v);
+  const fails = (S.series?.fails || []).filter(f => f.code==='E-204');
+  const lastFail = fails.at(-1);
+  const t = S.cursor?.board_temp_c ?? lastFail?.board_temp_c ?? g?.mean_board_temp_c ?? 25;
+  const exp = expected(v, t);
+  $('tiles').innerHTML = `
+    <div class="tile"><div class="label">${lastFail ? 'Letzter E-204 · ' + fmtT(lastFail.t) : 'I<sub>q</sub> Mittel 10 min'}</div><div class="v ${lastFail?'hot':''}">${lastFail ? lastFail.quiescent_current_ua : (g?.mean_quiescent_current_ua ?? '—')}<small>µA</small></div><div class="sub">${lastFail ? esc(lastFail.serial) + ' · bei ' + lastFail.board_temp_c + ' °C' : 'kein E-204 im Fenster'}</div></div>
+    <div class="tile"><div class="label">Limit DCU-${v==='A'?'A1':'B2'}</div><div class="v">${lim}<small>µA</small></div><div class="sub">TS-DCU-EOL §5 · gültig nur 18–32 °C (§4.2)</div></div>
+    <div class="tile"><div class="label">Modell bei ${t} °C</div><div class="v">≈ ${exp}<small>µA</small></div><div class="sub">typ. ${nominal(v)} µA bei 25 °C, +3 %/K; Streuung ±${v==='A'?20:25} µA (1σ) – ein Einzelwert darf darüber liegen</div></div>`;
+}
+function renderChart() {
+  const svg = $('chart'), s = S.series; if (!s || !s.buckets.length) { svg.innerHTML = ''; return; }
+  const W = 1376, H = 210, L = 44, R = 44, T = 14, B = 26, iw = W-L-R, ih = H-T-B;
+  const t0 = new Date(s.from_time).getTime(), t1 = new Date(s.to_time).getTime();
+  const x = t => L + (new Date(t).getTime()-t0)/(t1-t0)*iw;
+  const lim = limitFor(S.group.variant);
+  const iqs = s.buckets.map(b => b.quiescent_current_ua).concat(s.fails.map(f => f.quiescent_current_ua), [lim]);
+  const yMin = Math.min(...iqs) - 30, yMax = Math.max(...iqs) + 30;
+  const y = v => T + (1 - (v - yMin)/(yMax - yMin)) * ih;
+  const tMin = 15, tMax = 45, yt = v => T + (1 - (v - tMin)/(tMax - tMin)) * ih;
+  let out = '';
+  for (let i = 0; i < 4; i++) { const yy = T + ih*i/3; const val = Math.round(yMax - (yMax-yMin)*i/3); out += `<line x1="${L}" y1="${yy}" x2="${W-R}" y2="${yy}" stroke="#262b31"></line><text x="4" y="${yy+4}">${val}</text><text x="${W-R+6}" y="${yy+4}" fill="#8a6a40">${Math.round(tMax-(tMax-tMin)*i/3)}°</text>`; }
+  // invalid temperature band
+  s.buckets.forEach((b, i) => { if (b.board_temp_c > 32 || b.board_temp_c < 18) { const x0 = x(b.t), x1 = i+1 < s.buckets.length ? x(s.buckets[i+1].t) : W-R; out += `<rect x="${x0}" y="${T}" width="${Math.max(1,x1-x0)}" height="${ih}" fill="#f0a35c" fill-opacity="0.09"></rect>`; } });
+  out += `<line x1="${L}" y1="${y(lim)}" x2="${W-R}" y2="${y(lim)}" stroke="#d9531e" stroke-dasharray="4 4"></line><text x="${L+4}" y="${y(lim)-4}" fill="#d9531e">Limit ${lim} µA</text>`;
+  out += `<polyline fill="none" stroke="#f0a35c" stroke-width="1.2" stroke-opacity=".9" points="${s.buckets.map(b => `${x(b.t)},${yt(b.board_temp_c)}`).join(' ')}"></polyline>`;
+  out += `<polyline fill="none" stroke="#9fb4c9" stroke-width="1.6" points="${s.buckets.map(b => `${x(b.t)},${y(b.quiescent_current_ua)}`).join(' ')}"></polyline>`;
+  s.fails.forEach(f => { const c = f.code==='E-204' ? '#d9531e' : '#e8e8e8'; out += `<rect x="${x(f.t)-3}" y="${y(f.quiescent_current_ua)-3}" width="6" height="6" fill="${c}"><title>${f.code} · ${esc(f.serial)} · ${f.quiescent_current_ua} µA · ${f.board_temp_c} °C</title></rect>`; });
+  [0, .5, 1].forEach(p => { const tt = t0 + (t1-t0)*p; out += `<text x="${L + iw*p - (p===1?34:0)}" y="${H-8}">${fmtT(new Date(tt).toISOString())}</text>`; });
+  if (S.cursor) { const cx = x(S.cursor.t); out += `<line x1="${cx}" y1="${T}" x2="${cx}" y2="${T+ih}" stroke="#ffffff" stroke-opacity=".7"></line><circle cx="${cx}" cy="${y(S.cursor.quiescent_current_ua)}" r="3.5" fill="#fff"></circle>`; }
+  svg.innerHTML = out;
+}
+function onCursor(e) {
+  const s = S.series; if (!s || !s.buckets.length) return;
+  const r = $('chart').getBoundingClientRect(); const px = (e.clientX - r.left) / r.width * 1376;
+  const t0 = new Date(s.from_time).getTime(), t1 = new Date(s.to_time).getTime();
+  const tt = t0 + (px - 44) / (1376 - 88) * (t1 - t0);
+  let best = s.buckets[0], bd = Infinity; for (const b of s.buckets) { const d = Math.abs(new Date(b.t).getTime() - tt); if (d < bd) { bd = d; best = b; } }
+  S.cursor = best; renderCursor(e.clientX - r.left);
+}
+function renderCursor(px) {
+  renderChart(); const tip = $('tip'), b = S.cursor;
+  if (!b) { tip.style.display = 'none'; } else {
+    tip.style.display = 'block'; tip.style.left = Math.min(Math.max(px - 80, 0), $('chart').clientWidth - 230) + 'px';
+    tip.innerHTML = `${fmtT(b.t)} · I<sub>q</sub> ${b.quiescent_current_ua} µA · T1 <span style="color:${(b.board_temp_c>32||b.board_temp_c<18)?'#f0a35c':'#d8dde3'}">${b.board_temp_c} °C</span> · ${b.failed}/${b.n} fail`;
+  }
+  const g = S.stats?.groups.find(x => x.station===S.group.station && x.variant===S.group.variant);
+  renderTiles(g); $('t1val').textContent = (b?.board_temp_c ?? g?.mean_board_temp_c ?? '—') + ' °C';
+  const t = b?.board_temp_c ?? g?.mean_board_temp_c; const u1 = document.querySelector('#schem [data-comp="U1"]'); u1.classList.toggle('hot', !!(S.codeHot==='E-204' || S.report?.affected_components?.includes('U1')) || (t > 32));
+  const tEl = document.querySelector('#schem [data-comp="T1"]'); tEl.classList.toggle('hot', (t > 32 || t < 18) || S.report?.affected_components?.includes('T1'));
+  document.querySelectorAll('#ev tr').forEach(tr => tr.classList.toggle('cur', !!b && tr.dataset.src==='live'));
+}
+function renderSchematic(g) {
+  const comps = new Set(S.report?.affected_components?.length ? S.report.affected_components : (PATHS[S.codeHot]?.comps || []));
+  const wires = new Set(S.report?.affected_components?.length ? [].concat(...Object.values(PATHS).filter(p => p.comps.every(c => comps.has(c))).map(p => p.wires)) : (PATHS[S.codeHot]?.wires || []));
+  document.querySelectorAll('#schem .comp').forEach(el => el.classList.toggle('hot', comps.has(el.dataset.comp)));
+  document.querySelectorAll('#schem .wire').forEach(el => el.classList.toggle('hot', wires.has(el.dataset.w)));
+  const t = g?.mean_board_temp_c; if (t > 32) { document.querySelector('#schem [data-comp="T1"]').classList.add('hot'); }
+  $('u1note').textContent = t > 25 ? `Sleep ≈ ×${(1+0.035*(t-25)).toFixed(2)} bei ${t} °C` : 'Sleep ↑ 3.5 %/K';
+}
+function selectComp(code) {
+  S.selComp = code; document.querySelectorAll('#schem .comp').forEach(el => el.classList.toggle('sel', el.dataset.comp===code));
+  const c = COMP[code] || {name: code}; const p = S.bom.find(x => x.part_number===c.pn);
+  $('compinfo').innerHTML = `<span class="pn">${esc(c.pn || '—')}</span><span><b style="font-weight:500">${esc(c.name)}</b><br><span class="muted">${esc(p ? (p.description + (p.notes ? ' — ' + p.notes : '')) : (c.note || ''))}${p?.pcn ? ' · ' + esc(p.pcn) + (p.last_time_buy ? ' · LTB ' + p.last_time_buy : '') : ''}</span></span><span>${p ? `<span class="status ${p.status}">${p.status.replace(/_/g,' ')}</span>` : ''}</span>`;
+}
 
 async function ask() {
-  const q = document.getElementById('q').value.trim(); if (!q) return;
-  const btn = document.getElementById('askBtn'); btn.disabled = true; btn.classList.add('busy');
-  document.getElementById('askStatus').textContent = 'Agent arbeitet … (Tools laufen, bitte warten)';
-  document.getElementById('answer').textContent = ''; document.getElementById('tools').innerHTML = ''; document.getElementById('meta').textContent = '';
+  const q = $('q').value.trim(); if (!q) return;
+  const btn = $('askBtn'); btn.disabled = true; $('busy').hidden = false; $('decided').textContent = '';
+  $('steps').innerHTML = ['get_station_stats','get_recent_results','search_docs'].map((n,i) => `<div class="step pending"><span class="n">${i+1}</span><span class="t">…</span><span class="s">Werkzeuge laufen – je nach Frage 2–6 Aufrufe</span><span class="d"></span></div>`).join('');
+  $('hyps').innerHTML = '<div class="empty">wird ermittelt …</div>'; $('ev').innerHTML = '<tr><td class="empty">wird ermittelt …</td></tr>'; $('next').innerHTML = '<span class="empty">—</span>'; $('answer').textContent = '—'; $('meta').innerHTML = '';
+  document.querySelectorAll('#decide button').forEach(b => b.disabled = true);
+  const t0 = performance.now(); const timer = setInterval(() => { $('busyText').textContent = `Agent arbeitet … ${Math.round((performance.now()-t0)/1000)} s`; }, 500);
   try {
-    const r = await (await fetch('/ask', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({question: q})})).json();
-    document.getElementById('answer').textContent = r.answer || ('Fehler: ' + r.error);
-    document.getElementById('tools').innerHTML = r.tool_calls.map((t, i) => `<div class="tool"><b>${i+1}. ${t.name}</b> <code>${esc(JSON.stringify(t.input))}</code><pre>${esc(t.result_preview)}</pre></div>`).join('');
-    const u = r.usage || {};
-    document.getElementById('meta').innerHTML = `${r.iterations} Modell-Aufrufe · ${r.tool_calls.length} Tool-Aufrufe · Tokens ${u.input_tokens}/${u.output_tokens} (Cache gelesen ${u.cache_read_input_tokens}) · <b>${(r.cost_usd||0).toFixed(4)} $</b> · ${r.latency_s} s` + (r.citation_missing ? ' · <span class="warn">⚠ Guardrail: keine Quellenangabe</span>' : '') + (r.trace_id ? ` · <a href="${CFG.jaeger_url}/trace/${r.trace_id}" target="_blank" rel="noopener">Trace ↗</a>` : '');
-  } catch (e) { document.getElementById('answer').textContent = 'Fehler: ' + e; }
-  btn.disabled = false; btn.classList.remove('busy'); document.getElementById('askStatus').textContent = ''; refreshMetrics();
+    const r = await (await fetch('/ask', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({question:q})})).json();
+    S.last = r; S.report = r.report; renderInvestigation(r); poll();
+  } catch (e) { $('steps').innerHTML = `<div class="empty flag">Fehler: ${esc(e.message)}</div>`; }
+  clearInterval(timer); btn.disabled = false; $('busy').hidden = true; $('busyText').textContent = 'Agent arbeitet …'; refreshOps();
 }
-
-async function refreshMetrics() {
+const SUP = {strong:'Evidenz: stark', moderate:'Evidenz: mittel', weak:'Evidenz: schwach', rejected:'verworfen'};
+const FINDING = {pseudo_failure:'Pseudo-Fehler (Prüfumgebung)', real_failure:'Echter Fehler (Gerät)', unclear:'Unklar – Test erforderlich', information:'Information'};
+function renderInvestigation(r) {
+  const rep = r.report;
+  $('steps').innerHTML = r.tool_calls.length ? r.tool_calls.map((c,i) => `<div class="step"><span class="n">${i+1}</span><span class="t">${esc(c.name)}</span><span class="s" title="${esc(JSON.stringify(c.input))} → ${esc(c.result_preview)}">${esc(c.summary || c.result_preview)}</span><span class="d">${c.duration_ms ? c.duration_ms + ' ms' : ''}</span></div>`).join('') + `<div class="step"><span class="n">${r.tool_calls.length+1}</span><span class="t">Antwort</span><span class="s">${r.iterations} Modell-Aufrufe · ${esc(FINDING[rep?.finding] || (r.error ? 'Fehler' : 'Text'))}</span><span class="d">${r.latency_s} s</span></div>` : `<div class="empty ${r.error?'flag':''}">${esc(r.error || 'keine Werkzeuge benötigt')}</div>`;
+  if (!rep) { $('hyps').innerHTML = `<div class="empty">${r.error ? esc(r.error) : 'Antwort ohne strukturierten Report'}</div>`; $('ev').innerHTML = '<tr><td class="empty">—</td></tr>'; $('answer').textContent = r.answer || '—'; renderMeta(r); return; }
+  $('invSub').textContent = FINDING[rep.finding] || '';
+  $('hyps').innerHTML = rep.hypotheses.length ? rep.hypotheses.map((h,i) => `<div class="hyp ${h.support}"><span class="n">H${i+1}</span><span><b style="font-weight:500">${esc(h.title)}</b><div class="r">${esc(h.rationale)}</div></span><span class="sup ${h.support}">${SUP[h.support] || esc(h.support)}</span></div>`).join('') : '<div class="empty">keine Hypothesen – Informationsfrage</div>';
+  $('ev').innerHTML = rep.evidence.length ? rep.evidence.map((e,i) => `<tr data-src="${e.source_type}"><td class="n">${i+1}</td><td><span class="src ${e.source_type}">${e.source_type==='live'?'LIVE':'DOK'}</span>${esc(e.statement)}${e.supports ? `<div class="muted" style="font-size:11.5px">stützt: ${esc(e.supports)}</div>` : ''}</td><td class="c cite">${esc(e.citation)}</td></tr>`).join('') : '<tr><td class="empty">—</td></tr>';
+  const nt = rep.next_test;
+  $('next').innerHTML = nt ? `<b>${esc(nt.title)}</b><span class="meta">Erwartung: ${esc(nt.expectation)} · Dauer: ${esc(nt.duration)} · ${nt.block_units ? '<span class="flag">Einheiten sperren</span>' : 'keine Sperrung'}</span>` : '<span class="empty">kein Test vorgeschlagen</span>';
+  document.querySelectorAll('#decide button').forEach(b => b.disabled = !nt && b.dataset.d==='approve_test');
+  $('answer').textContent = r.answer || '—';
+  renderMeta(r); renderSchematic(S.stats?.groups.find(x => x.station===S.group.station && x.variant===S.group.variant));
+}
+function renderMeta(r) {
+  const u = r.usage || {};
+  $('meta').innerHTML = `<span>${r.iterations} Modell-Aufrufe</span><span>${r.tool_calls.length} Werkzeuge</span><span>Tokens <b>${u.input_tokens}</b>/<b>${u.output_tokens}</b> · Cache ${u.cache_read_input_tokens}</span><span>Kosten <b>${(r.cost_usd||0).toFixed(4)} $</b></span><span><b>${r.latency_s} s</b></span>${r.citation_missing ? '<span class="flag">Guardrail: keine Quellenangabe</span>' : ''}${r.error ? `<span class="flag">${esc(r.error)}</span>` : ''}<span class="mono">Prompt ${esc(r.prompt_version)}</span>${r.trace_id ? `<a href="${S.cfg.jaeger_url}/trace/${r.trace_id}" target="_blank" rel="noopener">Trace ${r.trace_id.slice(0,8)} ↗</a>` : ''}`;
+}
+async function decide(d) {
+  if (!S.last) return;
+  const body = { trace_id: S.last.trace_id, question: $('q').value.slice(0, 4000), decision: d, next_test: S.report?.next_test?.title || null, engineer: $('engineer').value };
+  try { await fetch('/decisions', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(body)}); $('decided').textContent = ({approve_test:'Test freigegeben', block_units:'Sperrung veranlasst', reject:'Abgelehnt'})[d] + ' · protokolliert'; refreshOps(); } catch (e) { $('decided').textContent = 'Fehler: ' + e.message; }
+}
+async function fault(f) { await fetch(`${S.cfg.twin_url}/faults`, {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(f)}); poll(); }
+async function clearFaults() { await fetch(`${S.cfg.twin_url}/faults`, {method:'DELETE'}); poll(); }
+function renderActive(f) { $('active').innerHTML = f.length ? 'Aktiv: ' + f.map(a => `<span>#${a.id} ${a.fault.type}${a.fault.station ? ' St. '+a.fault.station : ' '+a.fault.lot} · seit ${fmtT(a.started_at)}</span>`).join('') : 'Keine Störung aktiv – Linie im Normalbetrieb.'; }
+async function refreshOps() {
   try {
     const m = await (await fetch('/metrics')).json();
-    const k = document.getElementById('kpis');
-    if (!m.questions) { k.innerHTML = '<span class="status">Noch keine Fragen.</span>'; return; }
-    k.innerHTML = [['Fragen', m.questions], ['Kosten gesamt', m.total_cost_usd.toFixed(3)+' $'], ['Ø Kosten', m.avg_cost_usd.toFixed(4)+' $'], ['Ø Latenz', m.avg_latency_s+' s'], ['p95 Latenz', m.p95_latency_s+' s'], ['Cache-Trefferquote', Math.round(m.cache_hit_ratio*100)+' %'], ['Ø Modell-Aufrufe', m.avg_iterations], ['Ohne Quelle', m.citation_missing], ['Fehler', m.errors]].map(([l,v]) => `<div class="kpi"><b>${v}</b><span>${l}</span></div>`).join('');
-    const rows = await (await fetch('/metrics/recent?n=12')).json();
-    document.querySelector('#recent tbody').innerHTML = rows.map(r => `<tr><td>${r.timestamp.slice(11,19)}</td><td>${esc(r.question.slice(0,70))}</td><td>${r.tools.join(', ')}</td><td class="num">${r.iterations}</td><td class="num">${r.usage.input_tokens}/${r.usage.output_tokens}</td><td class="num">${r.usage.cache_read_input_tokens}</td><td class="num">${r.cost_usd.toFixed(4)}</td><td class="num">${r.latency_s}</td><td class="warn">${r.error||''}${r.citation_missing?' keine Quelle':''}</td></tr>`).join('');
+    $('kpis').innerHTML = m.questions ? [['Fragen', m.questions], ['Kosten', m.total_cost_usd.toFixed(2)+' $'], ['Ø Kosten', m.avg_cost_usd.toFixed(3)+' $'], ['Ø Latenz', m.avg_latency_s+' s'], ['p95', m.p95_latency_s+' s'], ['Cache', Math.round(m.cache_hit_ratio*100)+' %'], ['ohne Quelle', m.citation_missing], ['Fehler', m.errors]].map(([l,v]) => `<div class="kpi"><b>${v}</b><span>${l}</span></div>`).join('') : '<div class="kpi"><span>noch keine Fragen</span></div>';
+    const d = await (await fetch('/decisions?n=4')).json();
+    $('declog').innerHTML = d.length ? d.map(x => `<div><span class="mono">${x.timestamp.slice(11,16)}</span><span>${({approve_test:'Test freigegeben', block_units:'Sperrung', reject:'abgelehnt', request_8d:'8D'})[x.decision]}</span><span class="muted" style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">${esc(x.next_test || x.question)}</span><span class="mono">${esc((x.trace_id||'').slice(0,8))}</span></div>`).join('') : '<div class="empty">noch keine Freigabe</div>';
   } catch {}
 }
-function esc(s) { return String(s ?? '').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
 init();
 </script>
 </body>

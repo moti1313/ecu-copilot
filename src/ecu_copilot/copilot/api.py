@@ -1,11 +1,13 @@
 """Copilot service. Run with:  uvicorn ecu_copilot.copilot.api:app --port 8000
 
-Endpoints: POST /ask, GET /metrics, GET /metrics/recent, GET /health, GET /config, GET / (dashboard).
+Endpoints: POST /ask, GET /bom, POST /decisions, GET /decisions, GET /metrics, GET /metrics/recent,
+GET /health, GET /config, GET / (investigation workspace).
 """
 
 from __future__ import annotations
 
 import contextlib
+import json
 from collections.abc import AsyncIterator
 from pathlib import Path
 
@@ -18,11 +20,12 @@ from .. import config
 from ..rag.index import DocumentIndex
 from . import tools
 from .agent import make_copilot
-from .metrics import MetricsStore
+from .metrics import MetricsStore, now_iso
 from .telemetry import setup_tracing
 from .twin_client import TwinClient
 
 STATIC_DIR = Path(__file__).parent / "static"
+DECISIONS_FILE = config.DATA_DIR / "decisions.jsonl"
 state: dict = {}
 
 
@@ -47,12 +50,23 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     provider.shutdown()
 
 
-app = FastAPI(title="ECU Copilot", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="ECU Copilot", version="0.2.0", lifespan=lifespan)
 tracer = trace.get_tracer("ecu-copilot.api")
 
 
 class AskRequest(BaseModel):
     question: str = Field(min_length=1, max_length=4000)
+
+
+class Decision(BaseModel):
+    """What the engineer decided about the agent's proposal - stored with the trace for audit."""
+
+    trace_id: str | None = None
+    question: str = Field(max_length=4000)
+    decision: str = Field(pattern="^(approve_test|block_units|reject|request_8d)$")
+    next_test: str | None = None
+    note: str = Field(default="", max_length=2000)
+    engineer: str = Field(default="", max_length=120)
 
 
 @app.post("/ask")
@@ -66,6 +80,29 @@ def ask(req: AskRequest) -> dict:
         if result.error:
             span.set_attribute("error", result.error)
         return result.to_dict()
+
+
+@app.get("/bom")
+def bom() -> dict:
+    path = config.DOCS_DIR / "BOM-DCU.json"
+    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else {"parts": []}
+
+
+@app.post("/decisions", status_code=201)
+def add_decision(d: Decision) -> dict:
+    record = {"timestamp": now_iso(), **d.model_dump()}
+    DECISIONS_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with DECISIONS_FILE.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(record, ensure_ascii=False) + "\n")
+    return record
+
+
+@app.get("/decisions")
+def decisions(n: int = 20) -> list[dict]:
+    if not DECISIONS_FILE.exists():
+        return []
+    rows = [json.loads(line) for line in DECISIONS_FILE.read_text(encoding="utf-8").splitlines() if line.strip()]
+    return rows[-n:][::-1]
 
 
 @app.get("/metrics")
@@ -102,6 +139,7 @@ def ui_config() -> dict:
         "provider": config.LLM_PROVIDER,
         "model": config.AGENT_MODEL,
         "rag_mode": config.RAG_MODE,
+        "prompt_version": config.PROMPT_VERSION,
     }
 
 

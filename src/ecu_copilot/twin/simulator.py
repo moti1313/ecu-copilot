@@ -118,6 +118,72 @@ class Simulator:
                 break
         return out
 
+    def series(
+        self, station: int, variant: Variant | None = None, minutes: int = 30, bucket_s: int = 30, now: datetime | None = None
+    ) -> dict:
+        """Time series for the signal view: per-bucket means plus every failed unit as a marker."""
+        now = now or _utcnow()
+        cutoff = now - timedelta(minutes=minutes)
+        buckets: dict[int, list[TestResult]] = {}
+        fails: list[dict] = []
+        for r in reversed(self._results):
+            if r.timestamp < cutoff:
+                break
+            if r.station != station or (variant is not None and r.variant != variant):
+                continue
+            key = int((r.timestamp - cutoff).total_seconds() // bucket_s)
+            buckets.setdefault(key, []).append(r)
+            if r.verdict == Verdict.FAIL and len(fails) < 400:
+                m = r.measurements
+                fails.append(
+                    {
+                        "t": r.timestamp.isoformat(),
+                        "code": r.failure_code,
+                        "serial": r.serial,
+                        "lot": r.lot,
+                        "variant": r.variant,
+                        "quiescent_current_ua": m.quiescent_current_ua,
+                        "board_temp_c": m.board_temp_c,
+                        "ambient_noise_db": m.ambient_noise_db,
+                        "acoustic_score": m.acoustic_score,
+                        "operating_current_a": m.operating_current_a,
+                        "flash_time_s": m.flash_time_s,
+                    }
+                )
+        rows = []
+        for key in sorted(buckets):
+            rs = buckets[key]
+            rows.append(
+                {
+                    "t": (cutoff + timedelta(seconds=key * bucket_s)).isoformat(),
+                    "n": len(rs),
+                    "failed": sum(1 for r in rs if r.verdict == Verdict.FAIL),
+                    "quiescent_current_ua": _mean([r.measurements.quiescent_current_ua for r in rs]),
+                    "board_temp_c": _mean([r.measurements.board_temp_c for r in rs]),
+                    "ambient_noise_db": _mean([r.measurements.ambient_noise_db for r in rs]),
+                    "acoustic_score": _mean([r.measurements.acoustic_score for r in rs]),
+                }
+            )
+        limits = {
+            "quiescent_max_ua": {v.value: LIMITS[v]["quiescent_max_ua"] for v in Variant},
+            "flash_max_s": {v.value: LIMITS[v]["flash_max_s"] for v in Variant},
+            "operating_current_a": list(OPERATING_CURRENT_A),
+            "acoustic_min_score": ACOUSTIC_MIN_SCORE,
+            "temp_valid_c": [18.0, 32.0],
+            "noise_max_db": 45.0,
+        }
+        return {
+            "station": station,
+            "variant": variant.value if variant else None,
+            "minutes": minutes,
+            "bucket_s": bucket_s,
+            "from_time": cutoff.isoformat(),
+            "to_time": now.isoformat(),
+            "buckets": rows,
+            "fails": list(reversed(fails)),  # oldest first
+            "limits": limits,
+        }
+
     def stats(self, minutes: int = 10, now: datetime | None = None) -> StatsResponse:
         now = now or _utcnow()
         cutoff = now - timedelta(minutes=minutes)
