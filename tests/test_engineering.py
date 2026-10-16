@@ -100,3 +100,30 @@ def test_describe_signal_flags_and_relation(sim, now):
     assert d["iq_t1_relation"] == "iq_follows_t1"
     assert any("outside 18.0–32.0" in f for f in d["flags"])
     assert d["stats"]["board_temp_c"]["trend"] == "up"
+
+
+def test_detect_change_false_alarm_rate_on_unchanged_lines():
+    """Run-4 dry run: the detector flagged an unchanged line (S04). Over many seeds it must stay quiet."""
+    from datetime import UTC, datetime
+
+    from ecu_copilot.twin.simulator import Simulator
+
+    alarms = 0
+    seeds = range(30)
+    for seed in seeds:
+        s = Simulator(seed=seed)
+        t0 = datetime(2026, 10, 16, 20, 0, tzinfo=UTC)
+        s.seed_history(minutes=60, interval_s=1.5, now=t0)
+        rows = [r.model_dump(mode="json") for r in s.results(station=2, variant="B", minutes=60, limit=10000, now=t0)]
+        if detect_change(rows, metric="failure_rate", bucket_s=60, now=t0)["significant"]:
+            alarms += 1
+    assert alarms <= 1, f"{alarms}/{len(seeds)} false alarms on unchanged lines"
+
+
+def test_detect_change_still_finds_a_real_drift_with_the_minimum_effect(sim, now):
+    end = _run(sim, 2, now, n=400)
+    sim.add_fault(TemperatureDrift(station=2, ramp_s=0), now=end)
+    end2 = _run(sim, 2, end, n=400)
+    rows = [r.model_dump(mode="json") for r in sim.results(station=2, variant="B", minutes=30, limit=10000, now=end2)]
+    rate = detect_change(rows, metric="failure_rate", bucket_s=60, now=end2)
+    assert rate["significant"] and rate["direction"] == "up" and rate["level_after"] - rate["level_before"] >= 1.5

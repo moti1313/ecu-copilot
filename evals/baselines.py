@@ -237,6 +237,25 @@ def run_b0(question: str, station: int | None, variant: str | None, minutes: int
                 "supports": "H3 T1-Sensor",
             }
         )
+        # the same evidence duty as the agent: the leakage model and the validity rule come from documents
+        evidence.append(
+            {
+                "statement": "Sleep current rises ~3.5 % per kelvin above 25 °C - a reported temperature rise without a current rise contradicts the leakage model",
+                "source_type": "document",
+                "ref": _ref(None, None, None, doc_id="DS-MCU-XM32F7", revision="2.1", section="7.3"),
+                "citation": "DS-MCU-XM32F7 §7.3",
+                "supports": "H3 T1-Sensor",
+            }
+        )
+        evidence.append(
+            {
+                "statement": "The validity window refers to the station sensor T1; if T1 is wrong, validity of the results cannot be decided from it",
+                "source_type": "document",
+                "ref": _ref(None, None, None, doc_id="TS-DCU-EOL", revision=spec["revision"], section="4.2"),
+                "citation": "TS-DCU-EOL §4.2",
+                "supports": "H3 T1-Sensor",
+            }
+        )
         hyps.append(
             {
                 "title": "H3 T1-Sensor",

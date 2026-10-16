@@ -101,3 +101,29 @@ Zusatzbehauptungen im Detail:
 **Was noch nicht aussagekräftig ist:** „Stützung Dok" (Schlüsselwort-Heuristik, 21–48 %), Diagnose-Konsistenz (bei 3 Läufen grob), alles über zwei Szenarien hinaus.
 
 **Konsequenzen (Review 16.10., abends):** (1) Prompt-Regel 13 ist ein Versuch; sie bezieht sich ausdrücklich auf *zusätzliche Erklärungen für den Linienzustand* – einzelne echte Fehlprüfungen bleiben auch innerhalb der Grundrate sichtbar und untersuchbar. Metrik-Normalisierung eingebaut. Kein neuer Zwei-Szenarien-Lauf. (2) S08 wird geteilt: **S08 regulär** (vorab festgelegt: Wartezeit 300 s, Los-Rate 0,15, Lösbarkeit mindestens 8 E-204) und **S08w** als separater Schwachsignal-Versuch (bisherige Bedingungen). (3) **B0: Prüfgültigkeit und Ursache getrennt** – Gültigkeit wird je Messung deterministisch bewertet (keine Mindestanzahl); eine Ursachen-/Häufungsaussage braucht Anzahl, Verlauf und Bezugsgrößen. Sonst entstünde ein scheinbarer Agentenvorteil aus einer unnötigen Einschränkung des Regelwerks. (4) Nächster Benchmark vorab festgelegt (`CONCEPT.md` §10): S01, S04, S05, S08, S08w.
+
+## 2026-10-16 20:36 UTC · Modell gpt-5 · max_tokens 24000 · Szenarien S01-temperature-drift, S04-no-fault, S05-sensor-offset, S08-drift-and-bad-lot, S08w-drift-and-bad-lot-weak · 5 Läufe (4 regulär, 1 explorativ) · eingefrorener Datenstand je Szenario
+
+**Reguläre Szenarien (Lösbarkeit erfüllt, nicht explorativ) – Gesamtquoten** (S01-temperature-drift, S04-no-fault, S05-sensor-offset, S08-drift-and-bad-lot, 4 Läufe)
+
+| System | Abschluss | Befund korrekt | Bewertungen korrekt | Ursache | Zusatz-Behaupt. Ø | Bewertungen exakt | Zurückhaltung ok | Pflicht-Tools | Zitat vorh. | Herkunft live | Herkunft Dok | Stützung Dok | Nächster Test | Diagnose-Konsistenz | Ø s | Ø $ |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| B0 | 100 % | 75 % | 75 % | 75 % | 0.25 | 75 % | 75 % | 75 % | 75 % | 100 % (7/7) | 100 % (3/3) | 0 % (0/3) | 75 % | n/a | 0.0 | 0.000 |
+
+**Explorative Läufe (als explorativ markiert oder Lösbarkeit nicht erfüllt) – separat, nicht in der Gesamtquote** (S08w-drift-and-bad-lot-weak, 1 Läufe)
+
+| System | Abschluss | Befund korrekt | Bewertungen korrekt | Ursache | Zusatz-Behaupt. Ø | Bewertungen exakt | Zurückhaltung ok | Pflicht-Tools | Zitat vorh. | Herkunft live | Herkunft Dok | Stützung Dok | Nächster Test | Diagnose-Konsistenz | Ø s | Ø $ |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| B0 | 100 % | 100 % | 100 % | 100 % | 0.00 | 100 % | 100 % | 100 % | 100 % | 100 % (3/3) | 100 % (2/2) | 0 % (0/2) | 100 % | n/a | 0.0 | 0.000 |
+
+Je Szenario: abgeschlossen / Befund korrekt / Bewertungen exakt (über Wiederholungen); (E) = explorativ:
+
+| Szenario | B0 |
+|---|---|
+| S01-temperature-drift | 1 / 1 / 1 von 1 |
+| S04-no-fault · Detektor-Fehlalarm auf unveränderter Linie: ja | 1 / 0 / 0 von 1 |
+| S05-sensor-offset | 1 / 1 / 1 von 1 |
+| S08-drift-and-bad-lot | 1 / 1 / 1 von 1 |
+| S08w-drift-and-bad-lot-weak (E) | 1 / 1 / 1 von 1 |
+
+Lesehilfe: *regulär* = Lösbarkeit erfüllt und nicht explorativ; nur diese Läufe bilden die Gesamtquoten. *Abschluss* = auswertbarer Report ohne Fehler; *Diagnose-Konsistenz* = Mehrheitsanteil nur über abgeschlossene Läufe; *Zurückhaltung ok* = 'unklar' genau dann, wenn die Wahrheit es verlangt; *Herkunft live* n/a für Systeme ohne Referenzen (V1-Schema). *Herkunft* heißt: Die automatische Prüfung konnte die angegebene Quelle bzw. den referenzierten Wert nachvollziehen – nicht, dass die Aussage oder Diagnose richtig ist. *Stützung Dok* ist eine Schlüsselwort-Heuristik. *Zusatz-Behaupt.* = Bewertungen, die keiner Wahrheits-Gruppe entsprechen und eine Ursache behaupten; *Bewertungen exakt* = alle erwarteten gefunden und keine Zusatzbehauptung. B0 kennt die Szenario-Scope-Angabe (Station/Variante) aus der Szenariodefinition, nicht aus der Frage.
