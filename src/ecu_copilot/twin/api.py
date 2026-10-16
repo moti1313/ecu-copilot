@@ -64,7 +64,7 @@ def results(
     variant: Variant | None = None,
     minutes: int | None = Query(default=None, ge=1, le=240),
     only_failed: bool = False,
-    limit: int = Query(default=50, ge=1, le=1000),
+    limit: int = Query(default=50, ge=1, le=10000),
 ) -> list[TestResult]:
     return sim.results(station=station, variant=variant, minutes=minutes, only_failed=only_failed, limit=limit)
 

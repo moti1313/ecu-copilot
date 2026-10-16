@@ -1,0 +1,26 @@
+{
+  "doc_id": "TS-DCU-EOL",
+  "title": "End-of-Line Test Specification – Door Control Unit DCU-A1 / DCU-B2",
+  "revision": "D",
+  "effective": "2026-05-12",
+  "status": "current",
+  "source": "docs/TS-DCU-EOL.md",
+  "limits": {
+    "A": {"quiescent_max_ua": 350.0, "flash_max_s": 45.0, "typical_quiescent_ua": 240.0, "typical_flash_s": 31.0},
+    "B": {"quiescent_max_ua": 450.0, "flash_max_s": 60.0, "typical_quiescent_ua": 330.0, "typical_flash_s": 44.0},
+    "operating_current_a": [1.0, 2.4],
+    "acoustic_min_score": 70.0
+  },
+  "validity": {
+    "board_temp_c": {"min": 18.0, "max": 32.0, "rule": "TS-DCU-EOL §4.2", "applies_to_codes": ["E-204"], "result": "INVALID"},
+    "ambient_noise_db": {"max": 45.0, "rule": "TS-DCU-EOL §6.1", "applies_to_codes": ["E-310"], "result": "INVALID"}
+  },
+  "codes": {
+    "E-120": {"meaning": "No LIN communication", "first_check": "Connector J3, solder joints pins 5/6, lot history", "environmental": false, "rule": "TS-DCU-EOL §4.1, §7"},
+    "E-204": {"meaning": "Quiescent current above limit", "first_check": "Station temperature T1 (4.2), then unit", "environmental": true, "rule": "TS-DCU-EOL §4.3, §7"},
+    "E-205": {"meaning": "Operating current outside window", "first_check": "Motor fixture, H-bridge driver", "environmental": false, "rule": "TS-DCU-EOL §4.4, §7"},
+    "E-310": {"meaning": "Acoustic score below 70", "first_check": "Cell background noise (6.1), then gear", "environmental": true, "rule": "TS-DCU-EOL §6, §7"},
+    "E-401": {"meaning": "Flash/verify timeout", "first_check": "Service interface cable, firmware image", "environmental": false, "rule": "TS-DCU-EOL §4.5, §7"}
+  },
+  "escalation": {"rate_10min_pct": 5.0, "rate_shift_pct": 3.0, "rule": "TS-DCU-EOL §8"}
+}
