@@ -58,6 +58,10 @@ Your final message is a JSON object (the schema is enforced). Fields:
 - next_test: the single next action for the engineer to approve (title, expectation if the leading hypothesis holds, duration, block_units true only if units must be blocked), or null for information questions.
 - affected_components: codes of the components involved: U1 (MCU), U3 (LIN transceiver), U7 (H-bridge driver), U12 (antenna front-end), J3 (vehicle connector), T1 (station temperature sensor), MIC (acoustic cell microphone), MOTOR, GEAR, FIXTURE (motor load fixture), SERVICE_IF (flash/service interface). Empty if none."""
 
+_RULES_REFS = """9. Every live evidence item must carry a ref: the tool call number (1 = first call of this run), the exact field in that call's output (e.g. "codes.E-204.invalid_per_spec", "groups[station=2,variant=B].failure_rate_pct", "top.rate_ratio"), the station/variant/window it refers to, and the value. A value from station 1 is no evidence about station 2. Every document evidence item must carry doc_id, revision if known, and the section number.
+10. Propose a next test that DISCRIMINATES between your hypotheses (its result must come out differently if H1 is true vs H2), and say what you expect in each case.
+11. One evidence item = one field = one value. Never pack several fields into one ref (no "{a, b, c}"); make separate items. Write the section as a plain number ("4.2", not "§4.2") and the revision as a plain letter ("D")."""
+
 SYSTEM_PROMPT_V2 = f"""{_DOMAIN}
 
 You have deterministic engineering tools that compute checked evidence from the live test data - check_validity (which FAIL verdicts are INVALID per specification), detect_change (when a metric changed and whether significantly), cluster_failures (is a code concentrated in a lot/firmware/station, with lift and rate ratio), describe_signal (statistics, trends, whether quiescent current follows station temperature) - plus get_station_stats (overview), get_recent_results (a few raw rows), the engineering documentation (search_docs: EOL test specification, datasheets, FMEA, PCN, work instructions), the bill of materials (lookup_part) and draft_8d_report.
@@ -66,9 +70,7 @@ How to work
 1. For any question about the current state of the line: start with get_station_stats (10 min) for the overview, then detect_change for the affected station/variant BEFORE you say "since X minutes" or "rising", then check_validity BEFORE you say anything about validity or pseudo failures, cluster_failures (by lot, then by firmware) BEFORE you name a lot or version, and describe_signal when temperature or current are involved. Do not compute rates, trends or validity yourself from raw rows - the tools do that; you integrate and explain.
 2. Compare the tool results with the specification. Use search_docs to get limits, validity conditions and first checks - never quote a limit from memory. Write search queries in English; the documents are English.
 {_RULES_COMMON}
-9. Every live evidence item must carry a ref: the tool call number (1 = first call of this run), the exact field in that call's output (e.g. "codes.E-204.invalid_per_spec", "groups[station=2,variant=B].failure_rate_pct", "top.rate_ratio"), the station/variant/window it refers to, and the value. A value from station 1 is no evidence about station 2. Every document evidence item must carry doc_id, revision if known, and the section number.
-10. Propose a next test that DISCRIMINATES between your hypotheses (its result must come out differently if H1 is true vs H2), and say what you expect in each case.
-11. One evidence item = one field = one value. Never pack several fields into one ref (no "{{a, b, c}}"); make separate items. Write the section as a plain number ("4.2", not "§4.2") and the revision as a plain letter ("D").
+{_RULES_REFS}
 12. If check_validity, detect_change, cluster_failures or describe_signal return an error, do NOT replace them with your own calculation from stats or raw rows: set test_validity to "unknown", say which check could not be run, and recommend re-running it. A conclusion without the engineering checks is not allowed.
 
 Output format
@@ -264,7 +266,17 @@ REPORT_SCHEMA_V1 = {
     "required": ["answer_markdown", "finding", "hypotheses", "evidence", "next_test", "affected_components"],
 }
 
-PROFILES = {"v1": (SYSTEM_PROMPT_V1, REPORT_SCHEMA_V1), "v2": (SYSTEM_PROMPT_V2, REPORT_SCHEMA_V2)}
+# v1s = the V1 tools with the V2 report format: separates the effect of the engineering tools from the
+# effect of the richer schema (reviewer request, design/RESULTS.md run 1).
+SYSTEM_PROMPT_V1S = (
+    SYSTEM_PROMPT_V1.split("Output format")[0] + _RULES_REFS + "\n\nOutput format" + SYSTEM_PROMPT_V2.split("Output format")[1]
+)
+
+PROFILES = {
+    "v1": (SYSTEM_PROMPT_V1, REPORT_SCHEMA_V1),
+    "v1s": (SYSTEM_PROMPT_V1S, REPORT_SCHEMA_V2),
+    "v2": (SYSTEM_PROMPT_V2, REPORT_SCHEMA_V2),
+}
 REPORT_SCHEMA = REPORT_SCHEMA_V2
 SYSTEM_PROMPT = SYSTEM_PROMPT_V2
 

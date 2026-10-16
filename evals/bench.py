@@ -1,12 +1,16 @@
-"""Scenario benchmark: B0 / B1 / V1 / V2 on scenarios with known truth, repeated runs.
-    uv run python evals/bench.py [--scenarios S01,S08] [--systems b0,b1,v1,v2] [--repeats 3] [--model gpt-5]
+"""Scenario benchmark: B0 / B1 / V1 / V1S / V2 on scenarios with known truth, repeated runs.
+    uv run python evals/bench.py [--scenarios S01,S08] [--systems b0,b1,v1,v1s,v2] [--repeats 3] [--model gpt-5]
 
-Per scenario: inject the faults once, wait `settle_s`, check solvability, then run every system
-`repeats` times on the same live state (fairness: identical conditions), then clear the faults.
-Metrics per run (design/CONCEPT.md §5): assessment accuracy, finding accuracy, root-cause accuracy,
-abstention, required tools called, citation validity, provenance / support rates (verify.py),
-must-cite, next-test keywords, latency, cost. Consistency = share of runs with the majority finding.
-Writes data/evals/bench-<ts>.json and design/RESULTS.md (appended section).
+Method (design/CONCEPT.md §5, corrected after review of run 1):
+- Per scenario: inject the faults once, wait `settle_s`, check solvability, then take ONE SNAPSHOT of the
+  twin (every result of the last 4 h, fixed reference time). All systems and all repeats run against that
+  snapshot, so "same fault" also means "same data". The live twin keeps running but is not consulted.
+- Scores per run: assessment / finding / root-cause correctness, abstention, required tools, citation
+  validity, provenance and support rates (verify.py), must-cite, next-test keywords, latency, cost.
+- Three separate rates per system: completion (a parseable report without error), diagnosis consistency
+  (majority share among COMPLETED runs only), correctness (vs. truth). Six truncated answers never count
+  as "consistent".
+Writes data/evals/bench-<ts>.json and appends a section to design/RESULTS.md.
 """
 
 from __future__ import annotations
@@ -16,7 +20,7 @@ import json
 import statistics
 import sys
 import time
-from collections import Counter
+from collections import Counter, deque
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -33,12 +37,52 @@ from ecu_copilot.engineering.cluster import cluster_failures  # noqa: E402
 from ecu_copilot.engineering.spec import load_spec  # noqa: E402
 from ecu_copilot.engineering.validity import check_validity  # noqa: E402
 from ecu_copilot.rag.index import DocumentIndex  # noqa: E402
+from ecu_copilot.twin.models import TestResult  # noqa: E402
+from ecu_copilot.twin.simulator import Simulator  # noqa: E402
 from evals.baselines import run_b0, run_b1  # noqa: E402
 
 SCENARIO_DIR = Path(__file__).parent / "scenarios"
+SYSTEM_ORDER = ["b0", "b1", "v1", "v1s", "v2"]
 
 
-# --- solvability ---------------------------------------------------------------------------------
+# --- frozen data ----------------------------------------------------------------------------------
+class SnapshotTwin(TwinClient):
+    """A TwinClient that answers from a frozen copy of the twin's results with a fixed reference time.
+    Reuses the Simulator's query code (results / stats / series) over the copied results; never ticks."""
+
+    def __init__(self, rows: list[dict], now: datetime):
+        self._sim = Simulator()
+        self._sim._results = deque(
+            TestResult.model_validate(r) for r in sorted(rows, key=lambda r: r["timestamp"])
+        )  # oldest first, as the simulator stores them
+        self.now = now
+        self.n = len(rows)
+
+    @classmethod
+    def from_live(cls, twin: TwinClient, minutes: int = 240) -> SnapshotTwin:
+        rows = twin.results(minutes=minutes, only_failed=False, limit=10000)
+        rows = sorted(rows, key=lambda r: r["timestamp"])
+        now = datetime.fromisoformat(rows[-1]["timestamp"]) if rows else datetime.now(UTC)
+        return cls(rows, now)
+
+    def health(self) -> dict:
+        return {"status": "snapshot", "results": self.n, "reference_time": self.now.isoformat()}
+
+    def results(self, *, station=None, variant=None, minutes=None, only_failed=False, limit=50):
+        rows = self._sim.results(station=station, variant=variant, minutes=minutes, only_failed=only_failed, limit=limit, now=self.now)
+        return [r.model_dump(mode="json") for r in rows]
+
+    def stats(self, minutes: int = 10) -> dict:
+        return self._sim.stats(minutes=minutes, now=self.now).model_dump(mode="json")
+
+    def add_fault(self, fault):  # the snapshot is immutable
+        raise RuntimeError("snapshot twin is read-only")
+
+    def clear_faults(self):
+        raise RuntimeError("snapshot twin is read-only")
+
+
+# --- solvability -------------------------------------------------------------------------------------
 def solvable(sc: dict, twin: TwinClient) -> tuple[bool, str]:
     s = sc.get("solvability") or {}
     if not s:
@@ -60,7 +104,7 @@ def solvable(sc: dict, twin: TwinClient) -> tuple[bool, str]:
     return ok, msg
 
 
-# --- scoring -------------------------------------------------------------------------------------
+# --- scoring ------------------------------------------------------------------------------------------
 def _scope_match(truth_scope: dict, scope: dict | None) -> bool:
     scope = scope or {}
     if truth_scope.get("lot"):
@@ -74,7 +118,6 @@ def score(sc: dict, r, chunks, spec) -> dict:
     truth = sc["truth"]
     rep = r.report or {}
     assessments = rep.get("assessments") or []
-    # assessments: every truth entry must be matched by a report entry with the same scope and fields
     matched = 0
     for ta in truth["assessments"]:
         hit = next((a for a in assessments if _scope_match(ta["scope"], a.get("scope"))), None)
@@ -93,11 +136,8 @@ def score(sc: dict, r, chunks, spec) -> dict:
     tools_called = [c.name for c in r.tool_calls]
     required_ok = all(t in tools_called for t in truth.get("required_tools", []))
     citations = [e.get("citation", "") for e in rep.get("evidence", []) if e.get("source_type") == "document"]
-    must_cite = (
-        any(any(m in c for c in citations) or any(m in (r.answer or "") for m in [m]) for m in truth.get("must_cite_any", []))
-        if truth.get("must_cite_any")
-        else True
-    )
+    must = truth.get("must_cite_any", [])
+    must_cite = any(any(m in c for c in citations) or (m in (r.answer or "")) for m in must) if must else True
     nt = rep.get("next_test") or {}
     nt_text = json.dumps(nt, ensure_ascii=False)
     next_ok = (
@@ -107,16 +147,17 @@ def score(sc: dict, r, chunks, spec) -> dict:
     comps_ok = (
         any(c in (rep.get("affected_components") or []) for c in truth.get("components_any", [])) if truth.get("components_any") else True
     )
+    empty = {"ok": 0, "total": 0}
     ver = (
         verify_report(rep, r.tool_calls, chunks, spec).summary()
         if rep
-        else {
-            "provenance": {"live": {"ok": 0, "total": 0}, "docs": {"ok": 0, "total": 0}},
-            "support": {"live": {"ok": 0, "total": 0}, "docs": {"ok": 0, "total": 0}},
-        }
+        else {"provenance": {"live": empty, "docs": empty}, "support": {"live": empty, "docs": empty}}
     )
+    has_refs = any("ref" in e for e in rep.get("evidence", []))
     abstained = finding in ("unclear", "information")
+    completed = bool(rep) and not r.error
     return {
+        "completed": completed,
         "finding": finding,
         "finding_ok": finding == truth["finding"],
         "assessments_matched": f"{matched}/{n_truth}",
@@ -128,8 +169,7 @@ def score(sc: dict, r, chunks, spec) -> dict:
         "next_test_ok": next_ok,
         "block_units_ok": block_ok,
         "components_ok": comps_ok,
-        # systems on the V1 schema carry no refs: live provenance is not applicable, not zero
-        "prov_live": ver["provenance"]["live"] if any("ref" in e for e in rep.get("evidence", [])) else {"ok": 0, "total": 0},
+        "prov_live": ver["provenance"]["live"] if has_refs else empty,  # n/a for the V1 schema, not zero
         "prov_docs": ver["provenance"]["docs"],
         "supp_docs": ver["support"]["docs"],
         "n_evidence": len(rep.get("evidence", [])),
@@ -140,7 +180,7 @@ def score(sc: dict, r, chunks, spec) -> dict:
     }
 
 
-# --- systems -------------------------------------------------------------------------------------
+# --- systems ------------------------------------------------------------------------------------------
 def make_systems(names: list[str], model: str | None):
     systems = {}
     for n in names:
@@ -148,7 +188,7 @@ def make_systems(names: list[str], model: str | None):
             systems[n] = lambda q, sc: run_b0(q, _scope(sc).get("station"), _scope(sc).get("variant"))
         elif n == "b1":
             systems[n] = lambda q, sc: run_b1(q, model=model)
-        elif n in ("v1", "v2"):
+        elif n in ("v1", "v1s", "v2"):
             systems[n] = (lambda prof: lambda q, sc: make_copilot(profile=prof, model=model).ask(q))(n)
         else:
             raise SystemExit(f"unknown system {n}")
@@ -158,19 +198,18 @@ def make_systems(names: list[str], model: str | None):
 def _scope(sc: dict) -> dict:
     for f in sc.get("setup", []):
         if "station" in f:
-            return {
-                "station": f["station"],
-                "variant": next(
-                    (a["scope"].get("variant") for a in sc["truth"]["assessments"] if a["scope"].get("station") == f["station"]), None
-                ),
-            }
+            variant = next(
+                (a["scope"].get("variant") for a in sc["truth"]["assessments"] if a["scope"].get("station") == f["station"]), None
+            )
+            return {"station": f["station"], "variant": variant}
     return {}
 
 
+# --- main ---------------------------------------------------------------------------------------------
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--scenarios", default="all")
-    ap.add_argument("--systems", default="b0,b1,v1,v2")
+    ap.add_argument("--systems", default=",".join(SYSTEM_ORDER))
     ap.add_argument("--repeats", type=int, default=3)
     ap.add_argument("--model", default=None)
     ap.add_argument("--settle", type=int, default=None, help="override settle seconds")
@@ -182,10 +221,9 @@ def main() -> int:
         files = [f for f in files if any(f.name.startswith(w) for w in wanted)]
     scenarios = [json.loads(f.read_text(encoding="utf-8")) for f in files]
 
-    twin = TwinClient()
-    twin.health()
+    live = TwinClient()
+    live.health()
     index = DocumentIndex().load()
-    tools.configure(index=index, twin=twin)
     spec = load_spec()
     systems = make_systems(args.systems.split(","), args.model)
     model = args.model or config.AGENT_MODEL
@@ -195,24 +233,40 @@ def main() -> int:
 
     runs = []
     for sc in scenarios:
-        twin.clear_faults()
+        live.clear_faults()
         for f in sc["setup"]:
-            twin.add_fault(f)
+            live.add_fault(f)
         settle = args.settle if args.settle is not None else sc.get("settle_s", 120)
         print(f"[bench] {sc['id']}: faults injected, settling {settle}s …")
         time.sleep(settle)
-        ok, msg = solvable(sc, twin)
-        print(f"[bench] {sc['id']}: solvability {'OK' if ok else 'NOT MET'} ({msg})")
+        snap = SnapshotTwin.from_live(live)
+        tools.configure(index=index, twin=snap)  # every system reads the same frozen data
+        ok, msg = solvable(sc, snap)
+        print(
+            f"[bench] {sc['id']}: snapshot {snap.n} results, reference {snap.now:%H:%M:%S} · solvability {'OK' if ok else 'NOT MET'} ({msg})"
+        )
         for name, fn in systems.items():
             for rep_i in range(args.repeats):
                 r = fn(sc["question"], sc)
                 s = score(sc, r, index._chunks, spec)
-                s.update({"scenario": sc["id"], "system": name, "repeat": rep_i, "solvable": ok, "answer": r.answer, "report": r.report})
+                s.update(
+                    {
+                        "scenario": sc["id"],
+                        "system": name,
+                        "repeat": rep_i,
+                        "solvable": ok,
+                        "reference_time": snap.now.isoformat(),
+                        "answer": r.answer,
+                        "report": r.report,
+                    }
+                )
                 runs.append(s)
                 print(
-                    f"  {name:3} r{rep_i}  finding={str(s['finding']):15} assess={s['assessments_matched']} cause={'Y' if s['root_cause_ok'] else 'n'} tools={'Y' if s['required_tools_ok'] else 'n'} cite={'Y' if s['must_cite_ok'] else 'n'} prov={s['prov_live']['ok']}/{s['prov_live']['total']}+{s['prov_docs']['ok']}/{s['prov_docs']['total']} {s['latency_s']:5.1f}s {s['cost_usd']:.3f}$ {s['error'] or ''}"
+                    f"  {name:3} r{rep_i}  {'ok ' if s['completed'] else 'ERR'} finding={str(s['finding']):15} assess={s['assessments_matched']} cause={'Y' if s['root_cause_ok'] else 'n'} "
+                    f"tools={'Y' if s['required_tools_ok'] else 'n'} cite={'Y' if s['must_cite_ok'] else 'n'} prov={s['prov_live']['ok']}/{s['prov_live']['total']}+{s['prov_docs']['ok']}/{s['prov_docs']['total']} "
+                    f"{s['latency_s']:5.1f}s {s['cost_usd']:.3f}$ {s['error'] or ''}"
                 )
-        twin.clear_faults()
+        live.clear_faults()
 
     out_dir = config.DATA_DIR / "evals"
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -225,6 +279,7 @@ def main() -> int:
                 "provider": config.LLM_PROVIDER,
                 "prompt_version": config.PROMPT_VERSION,
                 "repeats": args.repeats,
+                "max_tokens": config.AGENT_MAX_TOKENS,
                 "runs": runs,
             },
             ensure_ascii=False,
@@ -235,57 +290,76 @@ def main() -> int:
     table = summarize(runs, model, ts)
     print("\n" + table)
     results_md = ROOT / "design" / "RESULTS.md"
-    header = "# Benchmark-Ergebnisse\n\nJeder Abschnitt ist ein Lauf von `evals/bench.py`. Zahlen sind Mittelwerte über Szenarien × Wiederholungen; Details in `data/evals/bench-*.json`.\n"
+    header = "# Benchmark-Ergebnisse\n\nJeder Abschnitt ist ein Lauf von `evals/bench.py`. Details in `data/evals/bench-*.json`.\n"
     prev = results_md.read_text(encoding="utf-8") if results_md.exists() else header
-    results_md.write_text(prev + "\n" + table + "\n", encoding="utf-8")
+    results_md.write_text(prev.rstrip("\n") + "\n\n" + table + "\n", encoding="utf-8")
     print(f"[bench] report: {out} · design/RESULTS.md updated")
     return 0
 
 
+def _pct(xs) -> str:
+    return f"{100 * sum(1 for x in xs if x) / len(xs):.0f} %" if xs else "–"
+
+
+def _rate(xs, key) -> str:
+    ok = sum(x[key]["ok"] for x in xs)
+    tot = sum(x[key]["total"] for x in xs)
+    return f"{100 * ok / tot:.0f} % ({ok}/{tot})" if tot else "n/a"
+
+
+def consistency(findings: list) -> float | None:
+    """Majority share among completed runs only (None/truncated runs are excluded, never counted as agreement)."""
+    valid = [f for f in findings if f is not None]
+    if len(valid) < 2:
+        return None
+    return Counter(valid).most_common(1)[0][1] / len(valid)
+
+
 def summarize(runs: list[dict], model: str, ts: datetime) -> str:
-    systems = sorted({r["system"] for r in runs}, key=lambda s: ["b0", "b1", "v1", "v2"].index(s) if s in ("b0", "b1", "v1", "v2") else 9)
+    systems = sorted({r["system"] for r in runs}, key=lambda s: SYSTEM_ORDER.index(s) if s in SYSTEM_ORDER else 9)
     scenarios = sorted({r["scenario"] for r in runs})
-    lines = [f"## {ts:%Y-%m-%d %H:%M} UTC · Modell {model} · Szenarien {', '.join(scenarios)} · {len(runs)} Läufe", ""]
-    lines.append(
-        "| System | Befund | Bewertungen (alle Gruppen) | Ursache | Pflicht-Tools | Zitat vorh. | Herkunft live | Herkunft Dok | Stützung Dok | Nächster Test | Konsistenz | Ø s | Ø $ |"
-    )
-    lines.append("|---|---|---|---|---|---|---|---|---|---|---|---|---|")
-
-    def pct(xs):
-        return f"{100 * sum(1 for x in xs if x) / len(xs):.0f} %" if xs else "–"
-
-    def rate(xs, key):
-        ok = sum(x[key]["ok"] for x in xs)
-        tot = sum(x[key]["total"] for x in xs)
-        return f"{100 * ok / tot:.0f} % ({ok}/{tot})" if tot else "–"
-
+    lines = [
+        f"## {ts:%Y-%m-%d %H:%M} UTC · Modell {model} · max_tokens {config.AGENT_MAX_TOKENS} · Szenarien {', '.join(scenarios)} · {len(runs)} Läufe · eingefrorener Datenstand je Szenario",
+        "",
+        "| System | Abschluss | Befund korrekt | Bewertungen korrekt | Ursache | Zurückhaltung ok | Pflicht-Tools | Zitat vorh. | Herkunft live | Herkunft Dok | Stützung Dok | Nächster Test | Diagnose-Konsistenz | Ø s | Ø $ |",
+        "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|",
+    ]
     for s in systems:
         rs = [r for r in runs if r["system"] == s]
-        cons = []
-        for sc in scenarios:
-            fs = [r["finding"] for r in rs if r["scenario"] == sc]
-            if fs:
-                cons.append(Counter(fs).most_common(1)[0][1] / len(fs))
+        done = [r for r in rs if r["completed"]]
+        cons = [
+            c
+            for c in (consistency([r["finding"] for r in rs if r["scenario"] == sc and r["completed"]]) for sc in scenarios)
+            if c is not None
+        ]
+        cons_txt = f"{100 * statistics.fmean(cons):.0f} %" if cons else "n/a"
         lines.append(
-            f"| {s.upper()} | {pct([r['finding_ok'] for r in rs])} | {pct([r['assessments_ok'] for r in rs])} | {pct([r['root_cause_ok'] for r in rs])} | "
-            f"{pct([r['required_tools_ok'] for r in rs])} | {pct([r['must_cite_ok'] for r in rs])} | {rate(rs, 'prov_live')} | {rate(rs, 'prov_docs')} | {rate(rs, 'supp_docs')} | "
-            f"{pct([r['next_test_ok'] for r in rs])} | {100 * statistics.fmean(cons):.0f} % | {statistics.fmean(r['latency_s'] for r in rs):.1f} | {statistics.fmean(r['cost_usd'] for r in rs):.3f} |"
+            f"| {s.upper()} | {_pct([r['completed'] for r in rs])} | {_pct([r['finding_ok'] for r in rs])} | {_pct([r['assessments_ok'] for r in rs])} | {_pct([r['root_cause_ok'] for r in rs])} | "
+            f"{_pct([r['abstain_ok'] for r in rs])} | {_pct([r['required_tools_ok'] for r in rs])} | {_pct([r['must_cite_ok'] for r in rs])} | {_rate(done, 'prov_live')} | {_rate(done, 'prov_docs')} | {_rate(done, 'supp_docs')} | "
+            f"{_pct([r['next_test_ok'] for r in rs])} | {cons_txt} | {statistics.fmean(r['latency_s'] for r in rs):.1f} | {statistics.fmean(r['cost_usd'] for r in rs):.3f} |"
         )
-    lines.append("")
-    lines.append("Je Szenario (Befund korrekt / Bewertungen korrekt, über Wiederholungen):")
-    lines.append("")
-    lines.append("| Szenario | " + " | ".join(s.upper() for s in systems) + " |")
-    lines.append("|---|" + "---|" * len(systems))
+    lines += [
+        "",
+        "Je Szenario: abgeschlossen / Befund korrekt / Bewertungen korrekt (über Wiederholungen):",
+        "",
+        "| Szenario | " + " | ".join(s.upper() for s in systems) + " |",
+        "|---|" + "---|" * len(systems),
+    ]
     for sc in scenarios:
         cells = []
         for s in systems:
             rs = [r for r in runs if r["system"] == s and r["scenario"] == sc]
-            cells.append(f"{sum(1 for r in rs if r['finding_ok'])}/{len(rs)} · {sum(1 for r in rs if r['assessments_ok'])}/{len(rs)}")
+            cells.append(
+                f"{sum(1 for r in rs if r['completed'])} / {sum(1 for r in rs if r['finding_ok'])} / {sum(1 for r in rs if r['assessments_ok'])} von {len(rs)}"
+            )
         lines.append(f"| {sc} | " + " | ".join(cells) + " |")
     errs = [r for r in runs if r["error"]]
     if errs:
-        lines.append("")
-        lines.append(f"Fehler: {len(errs)} Läufe – " + "; ".join(f"{r['system']}/{r['scenario']}: {r['error'][:80]}" for r in errs[:5]))
+        lines += ["", f"Fehler: {len(errs)} Läufe – " + "; ".join(f"{r['system']}/{r['scenario']}: {r['error'][:80]}" for r in errs[:6])]
+    lines += [
+        "",
+        "Lesehilfe: *Abschluss* = auswertbarer Report ohne Fehler; *Diagnose-Konsistenz* = Mehrheitsanteil nur über abgeschlossene Läufe; *Zurückhaltung ok* = 'unklar' genau dann, wenn die Wahrheit es verlangt; *Herkunft live* n/a für Systeme ohne Referenzen (V1-Schema). B0 kennt die Szenario-Scope-Angabe (Station/Variante) aus der Szenariodefinition, nicht aus der Frage.",
+    ]
     return "\n".join(lines)
 
 

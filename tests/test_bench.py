@@ -89,3 +89,36 @@ def test_score_penalises_single_finding_on_concurrent_scenario(bm25_index):
     )
     s = score(s08, r, bm25_index._chunks, load_spec())
     assert not s["finding_ok"] and s["assessments_matched"] == "0/2"
+
+
+def test_snapshot_twin_matches_simulator_and_is_frozen(sim, now):
+    from datetime import timedelta as _td
+
+    from evals.bench import SnapshotTwin, consistency
+
+    rows = [r.model_dump(mode="json") for r in sim.results(minutes=20, limit=10000, now=now)]
+    snap = SnapshotTwin(rows, now)
+    assert snap.n == len(rows) and snap.health()["status"] == "snapshot"
+    live = sim.stats(minutes=10, now=now).model_dump(mode="json")
+    assert snap.stats(minutes=10)["groups"] == live["groups"]
+    # the live simulator moves on; the snapshot does not
+    for i in range(1, 50):
+        sim.tick(2, now=now + _td(seconds=1.5 * i))
+    assert snap.stats(minutes=10)["groups"] == live["groups"]
+    assert len(snap.results(station=2, variant="B", minutes=10, limit=10000)) == len(
+        [r for r in rows if r["station"] == 2 and r["variant"] == "B" and r["timestamp"] >= (now - _td(minutes=10)).isoformat()]
+    )
+    # consistency ignores failed runs instead of counting them as agreement
+    assert consistency([None, None, None]) is None
+    assert consistency(["pseudo_failure", "pseudo_failure", None]) == 1.0
+    assert consistency(["pseudo_failure", "unclear", "pseudo_failure"]) == 2 / 3
+
+
+def test_v1s_profile_has_v1_tools_and_v2_schema():
+    from ecu_copilot.copilot.agent import PROFILES, REPORT_SCHEMA_V2, SYSTEM_PROMPT_V1S
+    from ecu_copilot.copilot.tools import TOOLS_V1, tools_for
+
+    assert tools_for("v1s") is TOOLS_V1
+    assert PROFILES["v1s"][1] is REPORT_SCHEMA_V2
+    assert "check_validity" not in SYSTEM_PROMPT_V1S and "assessments" in SYSTEM_PROMPT_V1S and "tool call number" in SYSTEM_PROMPT_V1S
+    assert "{a, b, c}" in SYSTEM_PROMPT_V1S  # braces survived the f-string

@@ -331,4 +331,4 @@ ALL_TOOLS = TOOLS_V2
 
 
 def tools_for(profile: str) -> list:
-    return TOOLS_V1 if profile == "v1" else TOOLS_V2
+    return TOOLS_V1 if profile in ("v1", "v1s") else TOOLS_V2
