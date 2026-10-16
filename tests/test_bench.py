@@ -122,3 +122,36 @@ def test_v1s_profile_has_v1_tools_and_v2_schema():
     assert PROFILES["v1s"][1] is REPORT_SCHEMA_V2
     assert "check_validity" not in SYSTEM_PROMPT_V1S and "assessments" in SYSTEM_PROMPT_V1S and "tool call number" in SYSTEM_PROMPT_V1S
     assert "{a, b, c}" in SYSTEM_PROMPT_V1S  # braces survived the f-string
+
+
+def test_extra_assessments_are_counted(bm25_index):
+    """Expected groups found AND an extra false claim -> not exact (reviewer point 1 after run 2)."""
+    from ecu_copilot.copilot.agent import AskResult, parse_report
+
+    s01 = json.loads((SCENARIO_DIR / "S01-temperature-drift.json").read_text())
+    base = {"answer_markdown": "x", "hypotheses": [], "evidence": [], "next_test": None, "affected_components": [], "routing": []}
+    good = {
+        "scope": {"station": 2, "variant": "B", "lot": None},
+        "test_validity": "invalid_temperature",
+        "defect_indication": "none_assessable",
+        "root_cause": "station_temperature",
+    }
+    benign = {
+        "scope": {"station": 2, "variant": "A", "lot": None},
+        "test_validity": "valid",
+        "defect_indication": "none",
+        "root_cause": "none",
+    }
+    false_claim = {
+        "scope": {"station": None, "variant": "B", "lot": "L2441-03"},
+        "test_validity": "valid",
+        "defect_indication": "strong",
+        "root_cause": "connector_lot",
+    }
+    r = AskResult(answer="x")
+    r.report = parse_report(json.dumps({**base, "assessments": [good, benign]}))
+    s = score(s01, r, bm25_index._chunks, load_spec())
+    assert s["assessments_ok"] and s["extra_assessments"] == 0 and s["assessments_exact"]
+    r.report = parse_report(json.dumps({**base, "assessments": [good, false_claim]}))
+    s = score(s01, r, bm25_index._chunks, load_spec())
+    assert s["assessments_ok"] and s["extra_assessments"] == 1 and not s["assessments_exact"] and "connector_lot" in s["extra_claims"][0]
