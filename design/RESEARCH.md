@@ -19,9 +19,9 @@ Zweck: Nicht „Ideen sammeln", sondern **belegen, welche Entscheidungen im ECU 
 ### 1.2 CausalPulse: *Agentic Copilot for Root Cause Analysis in Smart Manufacturing* (AAAI-26 Demo; Langfassung arXiv 2603.29755)
 [ojs.aaai.org/…/42381](https://ojs.aaai.org/index.php/AAAI/article/view/42381) · [arxiv.org/abs/2603.29755](https://arxiv.org/abs/2603.29755) – Shyalika et al.
 
-- **Gebaut:** Neurosymbolischer Multi-Agent-Copilot: Vorverarbeitung → Anomalieerkennung → **kausale Entdeckung** → RCA; Orchestrierung über MCP/A2A/LangGraph. Human-in-the-loop-Design.
-- **Gemessen:** Future-Factories-Datensatz (öffentlich) und ein proprietärer Sensor-Datensatz; „Erfolgsrate" 98 % (Definition im Abstract nicht angegeben); **50–60 s Latenz pro Diagnose-Workflow**; wird in einem **Bosch-Werk** eingeführt.
-- **Was wir mitnehmen:** (a) Die Agenten rufen **echte analytische Werkzeuge** auf (Anomalieerkennung, Kausalanalyse), sie „chatten" nicht über Rohdaten. Unser V1 lässt das Modell Statistik-JSON selbst interpretieren – das ist die Schwachstelle. (b) 50–60 s Latenz gilt dort als akzeptabel für eine Diagnose – unsere 25–80 s sind im Rahmen, aber wir sollten es messen und senken. (c) Zur Einordnung: Bosch (Mechatronik-Zulieferer) setzt genau diese Klasse von System ein.
+- **Gebaut (Volltext gelesen):** Sieben „Agenten", von denen **nur Planner und Replanner ein LLM sind** (llama-3.1-8b-instant). Alles Diagnostische ist deterministisch oder statistisch: Vorverarbeitung (Regeln), Anomalieerkennung (Schwellen, Isolation Forest, ein Fusionsmodell), kausale Entdeckung (PC/GES-Algorithmen, durch Domänenregeln hart eingeschränkt – **das LLM entscheidet nie über Kausalstruktur**), RCA (ProRCA-Pipeline), Recommender (Heuristiken). Orchestrierung LangGraph/MCP/A2A; Daten über OPC UA. Jeder Schritt ist bis zu den Rohdaten rückverfolgbar.
+- **Gemessen – mit wichtiger Einschränkung:** Die **98 % „Erfolgsrate" ist keine Diagnosegenauigkeit**, sondern „Agenten-Trace entspricht dem erwarteten Plan" (Planung, Tool-Nutzung, Kollaboration; 20–50 Anfragen je Stufe). Die eigentliche **RCA-Genauigkeit auf den Bosch-Daten: Hits@1 = 0,44, Hits@3 = 0,73, F1 = 0,39.** Latenz Ende-zu-Ende 53–60 s (davon RCA 21–23 s), gemessen auf einem MacBook. Datensätze: Bosch Anderson Plant (Schleifprozess, 18 Roboterstationen, ~4 % Ausschuss ≈ 15 M$/Jahr) und Future Factories (öffentlich). Einführung bei Bosch läuft; **keine Feldergebnisse** berichtet. Genannte Herausforderungen: Protokoll-Interoperabilität, **Vertrauen der Bediener**, Latenz unter Produktionsbedingungen.
+- **Was wir mitnehmen:** (a) Das Erfolgsmodell ist **„LLM plant, Werkzeuge diagnostizieren"** – noch strikter als unser V2-Entwurf. (b) Eine Diagnosegenauigkeit von 44 % Top-1 bei einem AAAI-Paper mit Bosch-Daten zeigt, wie schwer echte RCA ist – und warum unser Benchmark mit bekannter Wahrheit und Baselines nötig ist, bevor wir Zahlen behaupten. (c) 50–60 s Latenz gilt dort als akzeptabel; unsere 25–80 s sind im Rahmen. (d) Einordnung: Bosch setzt genau diese Systemklasse ein – und die Literatur unterscheidet sauber zwischen „der Agent hat den richtigen Plan ausgeführt" und „die Diagnose stimmt". Diese Unterscheidung übernehmen wir als zwei getrennte Metriken (Explorations-Vollständigkeit vs. Befund-Genauigkeit).
 
 ### 1.3 *Why Do AI Agents Systematically Fail at Cloud Root Cause Analysis?* (arXiv 2602.09937, Feb. 2026)
 [arxiv.org/abs/2602.09937](https://arxiv.org/html/2602.09937v2)
@@ -57,7 +57,7 @@ Zweck: Nicht „Ideen sammeln", sondern **belegen, welche Entscheidungen im ECU 
 | **Sensor-Level Fault Diagnosis for Automotive Software Validation Using LLMs** – arXiv 2608.05921 ([arxiv](https://arxiv.org/html/2608.05921v1)) | HiL-Signale werden in **Text-Deskriptoren** (Statistik, Korrelationen, Verhalten, Kontext-Flags) übersetzt; feinjustierte 2B–8B-Modelle erreichen ~82 % | Bestätigt: Signale als **strukturierte Deskriptoren** statt Rohdaten. Unser `series`-Endpunkt liefert Rohbuckets – V2 liefert Deskriptoren. |
 | **LLM-TSFD** – Zhang et al., *Expert Systems with Applications* 264 (2025), 79 Zitierungen ([ACM](https://dl.acm.org/doi/10.1016/j.eswa.2024.125861)) | Human-in-the-loop über die gesamte Pipeline (Datenvorbereitung, Kausalkorrektur, Diagnoseentscheidung) am Beispiel Stahlmetallurgie | Der Mensch ist nicht nur Freigeber am Ende, sondern korrigiert auch Zwischenschritte. Für uns: Ingenieur kann einen Beleg **ablehnen**, und das wird protokolliert. |
 | **RAG für kognitive Digital Twins mit Asset Administration Shell** – *Computers in Industry* 2025 ([sciencedirect](https://www.sciencedirect.com/science/article/pii/S0166361525000958)) | Standardisierte Informationsmodelle (AAS) statt freier Dokumente; Bewertungsprotokoll für offene RAG-Antworten | Für den Industriekontext: Industrie-4.0-Standard nennen können. Für uns zu schwer; wir machen den kleinen Schritt: **maschinenlesbare Spezifikation** (Limits, Gültigkeitsfenster, Revision) neben dem Markdown. |
-| **CI-gestützte HiL-Validierung mit intelligenter Fehleranalyse** – Abboush, Knieke, Rausch, *Scientific Reports* 15:32936, Sept. 2025 ([nature.com](https://www.nature.com/articles/s41598-025-21416-5)) | LSTM + DAE-k-means erkennen bekannte **und unbekannte** Fehler in HiL-Aufzeichnungen; CI-Integration | Zeigt die klassische ML-Seite (ohne LLM) – unser Baseline-Vergleich braucht eine solche regelbasierte/statistische Referenz. |
+| **CI-gestützte HiL-Validierung mit intelligenter Fehleranalyse** – Abboush, Knieke, Rausch, *Scientific Reports* 15:32936, Sept. 2025 ([nature.com](https://www.nature.com/articles/s41598-025-21416-5)) – **Volltext gelesen** | Jenkins-Pipeline (GitLab-Commit → Build → dSPACE-HiL-Test → Report ins Repo); Fehlerinjektion (Gain, Stuck-at, Noise, Drift, Delay) in Pedal- und Drehzahlsensor, 15 Fehlerklassen, 44,8 Mio. Samples; **GRU-Denoising-Autoencoder als gemeinsamer Merkmalsextraktor**, darauf ein LSTM-Klassifikator für **bekannte** Fehler (F1 92,6 %, Delay nur 82,6 %) und k-Means für **unbekannte** Fehler (F1 97,2 % bei Einzelfehlern). Keine Erklärbarkeit, keine Bedienerschnittstelle; Ergebnisse als Report-ZIP + E-Mail. Testfälle laut Autoren „einfacher als in der Produktion". | (a) Das Muster **„gemeinsamer Merkmalsextraktor + Klassifikator für bekannte Signaturen + Clustering für unbekannte"** ist die klassische ML-Referenz, gegen die ein LLM-Agent sich messen muss – unsere Baseline B0 ist die regelbasierte Mini-Version davon. (b) **Ergebnisse an Firmware-/Hardware-Revision koppeln** (CI-Artefakte) – wir übernehmen das als `firmware_version` je Ergebnis (Szenario S06). (c) Was dort fehlt und bei uns das Produkt ist: Erklärung, Belege, Mensch in der Schleife. Gutes Gesprächsargument: *„Die klassische Pipeline erkennt den Fehler; der Agent erklärt ihn und belegt die Erklärung."* |
 
 ## 3. Was die Literatur zusammen sagt (Thesen für V2)
 
@@ -68,7 +68,27 @@ Zweck: Nicht „Ideen sammeln", sondern **belegen, welche Entscheidungen im ECU 
 5. **Hypothesen werden getestet, nicht behauptet.** Twin-Simulation vor der Maßnahme (Prozessanlagen-Paper), unterscheidende Tests statt bestätigender (CoffeeBench). Simulation ersetzt keinen echten Test – das muss sichtbar bleiben.
 6. **Qualität wird auf einem Szenario-Benchmark gemessen**, mit bekannter Wahrheit, Lösbarkeitsfilter, Wiederholungen (Konsistenz) und Baselines – nicht mit „sieht gut aus".
 
-## 4. Was wir ausdrücklich *nicht* übernehmen
+## 4. Lesestand (Ehrlichkeit vor Vollständigkeit)
+
+| Quelle | Gelesen | Verlass auf die Angaben oben |
+|---|---|---|
+| Westermo (2609.21843) | Volltext | hoch |
+| Why Do AI Agents Fail at RCA (2602.09937) | Volltext | hoch |
+| CausalPulse Langfassung (2603.29755) | Volltext | hoch – inkl. Korrektur der 98 %-Zahl |
+| KG-geführtes RAG Automotive-HiL (2608.11277) | Volltext | hoch |
+| Sensor-Level HiL (2608.05921) | Volltext | hoch |
+| LLM-Agenten + Twin Prozessanlagen (2505.02076) | Volltext | hoch |
+| Sci Rep HiL + CI (Abboush 2025) | Volltext (Textextrakt) | hoch |
+| CoffeeBench (2610.19291), TraceBench (2608.27182) | erste ~100k Zeichen (Methode, Ergebnisse) – Anhänge nicht | mittel-hoch |
+| Digital Twin + RAG Lagerdiagnose (MDPI 2026) | **nur Abstract** (Verlag blockt Abruf) | mittel – Router-Zahlen aus dem Abstract |
+| LLM-TSFD (ESWA 2025) | nur Snippets, Paywall | niedrig – nur die Grundidee zitiert |
+| RAG + Asset Administration Shell (Computers in Industry 2025) | nur Abstract/Snippets | niedrig – nur die Grundidee zitiert |
+| Review „LLMs for fault diagnosis in smart manufacturing" (ISWA 2026) | nur Highlights aus der Suche | niedrig – nicht als Beleg verwendet |
+| MA-RCA, Multi-Agent-RCA in der Qualitätssicherung (Springer), ASAM ODX, LangGraph Interrupts | nicht gelesen | nicht verwendet |
+
+Die ungelesenen Quellen stützen keine Entscheidung in `ARCHITECTURE.md`. Wenn eine davon später gelesen wird und etwas ändert, wird dieser Abschnitt fortgeschrieben.
+
+## 5. Was wir ausdrücklich *nicht* übernehmen
 
 - Kausale Entdeckung (PC-Algorithmus etc., CausalPulse): für 3 Stationen und 7 Messgrößen überdimensioniert; unsere Kausalität steckt in Spezifikation und FMEA.
 - Feinjustierung kleiner Modelle (Sensor-Level, KG-HiL): nicht die Aufgabe eines Copilots mit Dokumentenzugriff; außerhalb des Zeitrahmens.

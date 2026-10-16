@@ -93,6 +93,13 @@ Läuft nach dem Modell, vor der Antwort. Kein LLM.
 ### 4.3 Baselines (`evals/baselines.py`)
 - **B0:** ruft Schicht 2 direkt, Entscheidungsbaum: `check_validity` → wenn INVALID-Anteil > 50 % → Pseudo; sonst `cluster_failures(by=lot)` → Konzentration > 0,5 → Echt/Los; sonst unklar. Kein LLM.
 - **B1:** ein Aufruf: Statistik 10/60 min + Top-5-Chunks + Frage → Report-Schema. Keine Tools.
+- **B2 (optional, bei Zugang):** TypeSafe-AI **Jev** (System-One-Modell, typisierte Entscheidungen mit kalibrierter Wahrscheinlichkeit): Zustand = Deskriptoren aus `describe_signal` + `check_validity`, Frage = *Choice* {pseudo_failure, real_failure, unclear}. Misst, ob ein Klassifikator mit Wahrscheinlichkeit für die Triage reicht – und ob seine Kalibrierung auf unseren Szenarien stimmt.
+
+### 4.4 Router und Triage (optional, Ergänzung – kein Ersatz des Agenten)
+Zwei Aufgaben vor dem Agenten, hinter einem Schalter `ROUTER=none|llm|jev`:
+- **Router:** *Choice* „braucht die Frage live / docs / beides / außerhalb" (Idee: Lagerdiagnose-Paper, Router-Genauigkeit 0,98). Mit `jev`: ~0,2 s, ~0,0001 $; mit `llm`: ein kleiner Modellaufruf; mit `none`: der Agent entscheidet implizit wie in V1. Off-Topic endet vor dem teuren Modell. Die Routing-Entscheidung wird geloggt und im Benchmark bewertet (Explorations-Vollständigkeit).
+- **Triage (System One vor System Two):** bei jeder Ratenänderung (`detect_change` signifikant) eine *Choice*-Klassifikation mit Wahrscheinlichkeit; Schwellen entscheiden, ob der Leitstand nur markiert, den Agenten startet oder den Ingenieur ruft. Jev liefert hier, was ein LLM nicht liefern kann: eine trainierte, nicht erfundene Wahrscheinlichkeit – **ihre Kalibrierung ist eine Benchmark-Frage (B2), keine Annahme.**
+- Grenzen: Jev erzeugt keinen Text, ruft keine Werkzeuge, liest keine Dokumente, zitiert nicht. Untersuchung, Belege und Testvorschlag bleiben beim Agenten. Anbieter ist jung (09/2026, Early Access); alles läuft ohne ihn weiter.
 
 ## 5. Schicht 4 – Mensch in der Schleife
 - Belege einzeln **ablehnen** (Grund wählbar), gespeichert mit Trace-ID.
@@ -116,6 +123,7 @@ Läuft nach dem Modell, vor der Antwort. Kein LLM.
 | A6 | Benchmark mit Wahrheit, Lösbarkeitsfilter, Wiederholungen, Baselines | TraceBench, CoffeeBench, Westermo |
 | A7 | Spezifikation maschinenlesbar neben Markdown, aus Markdown generiert | AAS-Idee im Kleinen; Konsistenz testbar |
 | A8 | Provider-Abstraktion bleibt; Modellwahl ist Benchmark-Ergebnis | TraceBench: Modelle unterscheiden sich stark in Kosten/Genauigkeit |
+| A9 | System-One-Modell (Jev) nur für Routing/Triage, hinter Schalter, als Ergänzung | Lagerdiagnose-Paper (Router); Westermo (Confidence-Problem); Anbieterrisiko → optional |
 
 ## 8. Dateiplan (neu / geändert)
 
