@@ -34,7 +34,9 @@ from ecu_copilot.copilot import tools  # noqa: E402
 from ecu_copilot.copilot.agent import make_copilot  # noqa: E402
 from ecu_copilot.copilot.twin_client import TwinClient  # noqa: E402
 from ecu_copilot.copilot.verify import verify_report  # noqa: E402
+from ecu_copilot.engineering.change import detect_change  # noqa: E402
 from ecu_copilot.engineering.cluster import cluster_failures  # noqa: E402
+from ecu_copilot.engineering.describe import describe_signal  # noqa: E402
 from ecu_copilot.engineering.spec import load_spec  # noqa: E402
 from ecu_copilot.engineering.validity import check_validity  # noqa: E402
 from ecu_copilot.rag.index import DocumentIndex  # noqa: E402
@@ -90,6 +92,18 @@ def solvable(sc: dict, twin: TwinClient) -> tuple[bool, str]:
     if not s:
         return True, "no check"
     rows = twin.results(station=s.get("station"), variant=s.get("variant"), minutes=10, only_failed=False, limit=10000)
+    if s.get("check") == "no_change":  # S04: the line must really be normal
+        rate = 100.0 * sum(1 for r in rows if r["verdict"] == "fail") / len(rows) if rows else 0.0
+        chg = detect_change(
+            twin.results(station=s.get("station"), variant=s.get("variant"), minutes=60, only_failed=False, limit=10000),
+            metric="failure_rate",
+        )
+        ok = rate <= s.get("max_rate_pct", 4.0) and not chg.get("significant")
+        return ok, f"rate 10 min {rate:.1f} %, change significant={chg.get('significant')}"
+    if s.get("check") == "decoupled":  # S05: reported T1 high, current does not follow
+        d = describe_signal(rows, load_spec())
+        ok = d.get("iq_t1_relation") == "decoupled" and d["stats"]["board_temp_c"]["mean"] >= s.get("min_reported_temp_c", 32.0)
+        return ok, f"relation={d.get('iq_t1_relation')}, reported T1 mean {d['stats']['board_temp_c']['mean']} °C"
     v = check_validity(rows, load_spec())
     code = v["codes"].get(s.get("code"), {})
     fails = code.get("fail_verdicts", 0)

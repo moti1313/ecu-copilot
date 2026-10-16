@@ -69,7 +69,16 @@ class BadLot(BaseModel):
     fail_rate: float = Field(default=0.15, ge=0, le=1, description="Share of units with a LIN fault")
 
 
-Fault = TemperatureDrift | AcousticNoise | BadLot
+class SensorOffset(BaseModel):
+    """The station's T1 sensor reads wrong: the REPORTED temperature is offset, the physical one is not.
+    Quiescent current therefore does not follow the reported T1 - the decoupling signature."""
+
+    type: Literal["sensor_offset"] = "sensor_offset"
+    station: int
+    offset_c: float = Field(default=9.0, description="Reported minus physical temperature in K")
+
+
+Fault = TemperatureDrift | AcousticNoise | BadLot | SensorOffset
 
 
 class ActiveFault(BaseModel):

@@ -194,3 +194,58 @@ def test_must_cite_tolerates_section_sign(bm25_index):
         )
     )
     assert score(s08, r, bm25_index._chunks, load_spec())["must_cite_ok"]
+
+
+def test_sensor_offset_decouples_reported_temperature_from_current(sim, now):
+    """S05: the station REPORTS +9 K, physics is unchanged - Iq stays normal, so E-204 does not rise."""
+    from ecu_copilot.engineering.describe import describe_signal
+    from ecu_copilot.twin.models import SensorOffset
+
+    end = _drive(sim, now, [], n=200)
+    end2 = _drive(sim, end, [SensorOffset(station=2, offset_c=9.0)], n=300)
+    rows = [r.model_dump(mode="json") for r in sim.results(station=2, variant="B", minutes=15, limit=10000, now=end2)]
+    d = describe_signal(rows)
+    assert d["stats"]["board_temp_c"]["trend"] == "up" and d["stats"]["board_temp_c"]["second_half"] > 32
+    assert d["iq_t1_relation"] == "decoupled"
+    e204 = sum(1 for r in rows if r["failure_code"] == "E-204")
+    assert e204 <= 3  # no real current rise
+
+
+def test_b0_abstains_on_s04_and_names_sensor_on_s05(sim, now, bm25_index):
+    from ecu_copilot.twin.models import SensorOffset
+    from evals.bench import solvable
+
+    s04 = json.loads((SCENARIO_DIR / "S04-no-fault.json").read_text())
+    s05 = json.loads((SCENARIO_DIR / "S05-sensor-offset.json").read_text())
+    spec = load_spec()
+    twin = SimTwin(sim, now)
+    tools.configure(index=bm25_index, twin=twin)
+    ok, msg = solvable(s04, twin)
+    assert ok, msg
+    r = run_b0(s04["question"], station=2, variant="B")
+    s = score(s04, r, bm25_index._chunks, spec)
+    assert s["finding_ok"] and s["assessments_exact"] and s["abstain_ok"], s
+
+    end = _drive(sim, now, [SensorOffset(station=2, offset_c=9.0)], n=400)
+    twin = SimTwin(sim, end)
+    tools.configure(index=bm25_index, twin=twin)
+    ok, msg = solvable(s05, twin)
+    assert ok, msg
+    r = run_b0(s05["question"], station=2, variant="B")
+    s = score(s05, r, bm25_index._chunks, spec)
+    assert s["assessments_exact"] and s["abstain_ok"], (s, r.report["assessments"])
+
+
+def test_b0_validity_without_cause_claim_on_a_single_invalid_measurement(sim, now, bm25_index):
+    """One INVALID E-204 at normal temperature statistics: validity is a finding, the cause is not."""
+    from ecu_copilot.copilot.agent import parse_report  # noqa: F401
+
+    tools.configure(index=bm25_index, twin=SimTwin(sim, now))
+    rows = sim.results(station=2, variant="B", minutes=10, limit=10000, now=now)
+    # fabricate: mark one failed unit as E-204 measured hot (reported), everything else untouched
+    victim = next(r for r in rows if r.verdict == "fail")
+    victim.failure_code = "E-204"
+    victim.measurements.board_temp_c = 33.5
+    r = run_b0("?", station=2, variant="B")
+    a = next(a for a in r.report["assessments"] if a["scope"]["station"] == 2)
+    assert a["test_validity"] == "invalid_temperature" and a["root_cause"] == "unknown"

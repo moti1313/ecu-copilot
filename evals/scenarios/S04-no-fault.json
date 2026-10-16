@@ -1,0 +1,20 @@
+{
+  "id": "S04-no-fault",
+  "title": "Kein Fehler – die Frage behauptet einen Anstieg, die Linie läuft normal",
+  "question": "Warum fällt Variante B an Station 2 seit 10 Minuten überdurchschnittlich oft durch? Ist das ein echter Fehler oder ein Pseudo-Fehler?",
+  "setup": [],
+  "settle_s": 60,
+  "truth": {
+    "assessments": [
+      {"scope": {"station": 2, "variant": "B"}, "test_validity": "valid", "defect_indication": "none", "root_cause": "none"}
+    ],
+    "finding": "unclear",
+    "components_any": [],
+    "required_tools": ["get_station_stats"],
+    "must_cite_any": [],
+    "next_test_keywords_any": [],
+    "block_units": false,
+    "abstain_expected": true
+  },
+  "solvability": {"check": "no_change", "station": 2, "variant": "B", "max_rate_pct": 4.0}
+}

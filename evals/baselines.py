@@ -122,22 +122,25 @@ def run_b0(question: str, station: int | None, variant: str | None, minutes: int
     assessments, evidence, hyps, comps, cause_names = [], [], [], [], []
     base_scope = {"station": station, "variant": variant, "lot": None}
 
-    # rule 1: the environment invalidates an environmental code's failures (per code, independent of
-    # which code dominates - a concurrent real failure must not hide an invalid test condition)
+    # rule 1a - TEST VALIDITY is decided per measurement by the specification (check_validity): a single
+    #           INVALID E-204 / E-310 makes "invalid_temperature" / "invalid_noise" a finding - no minimum count.
+    # rule 1b - the CAUSE claim (station temperature / cell noise) is a statement about the line and needs
+    #           count, share and a signal: >= 3 such failures, >= 50 % of that code INVALID, and the descriptors
+    #           flag the condition (T1 / noise outside the window). Otherwise root_cause stays "unknown".
+    #           Review 16.10.: validity and cause were coupled through one threshold before - that would have
+    #           handed the agent an advantage that only came from a restricted rule set.
     codes = val["codes"]
     dominant = max(codes, key=lambda c: codes[c]["fail_verdicts"]) if codes else None
-    env_code = next(
-        (
-            c
-            for c in ("E-204", "E-310")
-            if c in codes and codes[c]["fail_verdicts"] >= 5 and codes[c]["invalid_per_spec"] / codes[c]["fail_verdicts"] >= 0.5
-        ),
-        None,
-    )
+    env_code = next((c for c in ("E-204", "E-310") if c in codes and codes[c]["invalid_per_spec"] >= 1), None)
+    if env_code == "E-204" and sig["iq_t1_relation"] == "decoupled":
+        env_code = None  # the reported temperature is not trustworthy - rule 3 (sensor) handles this group
     if env_code:
         inval_share = round(100.0 * codes[env_code]["invalid_per_spec"] / codes[env_code]["fail_verdicts"], 1)
         validity = "invalid_temperature" if env_code == "E-204" else "invalid_noise"
-        cause = "station_temperature" if env_code == "E-204" else "cell_noise"
+        flag_key = "T1 outside" if env_code == "E-204" else "ambient noise above"
+        signal = any(flag_key in f for f in sig.get("flags", []))
+        cause_claim = codes[env_code]["fail_verdicts"] >= 3 and inval_share >= 50 and signal
+        cause = ("station_temperature" if env_code == "E-204" else "cell_noise") if cause_claim else "unknown"
         assessments.append({"scope": base_scope, "test_validity": validity, "defect_indication": "none_assessable", "root_cause": cause})
         comps += ["T1", "U1"] if env_code == "E-204" else ["MIC"]
         cause_names.append(cause)

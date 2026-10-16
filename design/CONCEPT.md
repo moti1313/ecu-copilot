@@ -108,6 +108,23 @@ Reihenfolge ist fix: **erst messen (1), dann testen (2), dann schön (4).**
 - **Jev zurückgestellt.** Bleibt als Option in `ARCHITECTURE.md` §4.4 beschrieben, wird vor Abschluss von Phase 2 nicht gebaut.
 - Die vier Punkte aus Review 2 (strukturierte Belegzuordnung, getrennte Bewertung von Prüfgültigkeit und Bauteilfehler, faire Baselines mit Bezugsgrößen, Re-Test derselben Einheiten mit erhaltenen Defekten) sind in §5 (Metriken) und §7 (Abnahme Phase 1/2) und in `ARCHITECTURE.md` §3/§4 festgehalten.
 
+## 10. Vorab festgelegter nächster Benchmark (Lauf 4) – Stand 16.10.2026, abends
+
+Festgelegt **vor** dem Lauf; Änderungen danach werden als solche dokumentiert.
+
+| Punkt | Festlegung |
+|---|---|
+| Szenarien | **S01** Temperaturdrift (150 s) · **S04** kein Fehler, Frage behauptet Anstieg (60 s; Wahrheit: Zurückhalten) · **S05** T1-Sensor-Offset +9 K (150 s; Wahrheit: `sensor_t1`, Gültigkeit unbekannt, Zurückhalten) · **S08** Drift + Los *regulär* (300 s, Los-Rate 0,15, Lösbarkeit ≥ 8 E-204 und ≥ 8 Los-Fehler) · **S08w** Schwachsignal (150 s, Los-Rate 0,25) – **separat ausgewiesen, nicht in der Gesamtquote** |
+| Lösbarkeit | je Szenario vorab definiert (`solvability`); nicht erfüllt ⇒ Szenario gilt als explorativ und wird aus der Gesamtquote herausgenommen, nicht nachträglich umdefiniert |
+| Systeme | B0 (mit getrennter Gültigkeits-/Ursachenbewertung), B1, V1S, V2. V1 entfällt (Formateffekt ist mit V1S isoliert; V1 bleibt per `AGENT_PROFILE=v1` reproduzierbar) |
+| Wiederholungen | 3 je System und Szenario; eingefrorener Datenstand je Szenario; Twin-Reset mit festem Seed (1000 + Index) |
+| Modell / Konfiguration | gpt-5, effort medium, max_tokens 24 000, Prompt 2026-10-16.3 (Regel 13 als Versuch – Wirkung wird an S01 „exakt" abgelesen) |
+| Primärmetriken | Bewertungen **exakt** (gefunden ∧ keine Zusatzbehauptung), Befund korrekt, **Zurückhaltung ok** (S04/S05), Herkunft live/Dok |
+| Sekundär | Pflicht-Werkzeuge, Nächster Test, Diagnose-Konsistenz (nur abgeschlossene), Latenz, Kosten; Stützung Dok nur informativ |
+| Erfolgskriterium für „Agent lohnt sich" | V2 ≥ B0 auf S04/S05 bei „exakt" **und** V2 ohne Zusatzbehauptung auf S01 ≥ 2/3. Trifft das nicht zu, wird das so festgehalten. |
+| Archiv | vollständig (Schnappschuss, Werkzeugausgaben, Commit, Prompt-Version) – ab diesem Lauf vorhanden |
+| Kosten/Dauer (Schätzung) | ≈ 45 Modellläufe ≈ 5 $, ≈ 60 min |
+
 ## 9. Noch offene Entscheidungen (blockieren Phase 0/1 nicht)
 1. Modell für den Benchmark: gpt-5 (teurer, 60 Läufe ≈ 4 $) oder gpt-5-mini (≈ 1 $, evtl. schlechter)? Vorschlag: beide, das ist selbst ein Ergebnis.
 2. Judge: gpt-5-mini (gleiche Familie) oder – bei verfügbarem unabhängigem Modellzugang – claude-haiku als unabhängiger Judge? Vorschlag: Haiku, wenn verfügbar.

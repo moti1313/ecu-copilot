@@ -1,8 +1,10 @@
 """describe_signal: compact text descriptors of a window instead of raw rows.
 
 Statistics, trend (first half vs second half), the Iq-T1 relation, and flags the specification cares
-about. The decoupling flag ("T1 rose but Iq did not follow") is the signature of a temperature-sensor
-fault - correlation alone would mislead there.
+about. The relation is judged on LEVELS against the leakage model, not on correlation: a window that
+is uniformly hot has little variation and a low correlation although the current follows the
+temperature perfectly. "Decoupled" (T1 says hot, Iq stays at its 25 °C level) is the signature of a
+faulty temperature sensor.
 """
 
 from __future__ import annotations
@@ -12,6 +14,8 @@ import math
 from .spec import load_spec
 
 MEASUREMENTS = ["quiescent_current_ua", "operating_current_a", "flash_time_s", "board_temp_c", "ambient_noise_db", "acoustic_score"]
+LEAKAGE_COEFF_PER_K = 0.03  # system level (DS-MCU-XM32F7 §7.3: ~3.5 %/K for the MCU alone)
+MIN_MODEL_RISE_UA = 8.0  # below this expected rise the relation cannot be judged
 
 
 def _mean(xs):
@@ -56,38 +60,40 @@ def describe_signal(results: list[dict], spec: dict | None = None) -> dict:
     nw = spec["validity"]["ambient_noise_db"]
     temp_out = sum(1 for x in t1 if not (tw["min"] <= x <= tw["max"]))
     noise_out = sum(1 for r in rs if r["measurements"]["ambient_noise_db"] > nw["max"])
-    t1_rise = stats["board_temp_c"]["second_half"] - (stats["board_temp_c"]["first_half"] or stats["board_temp_c"]["second_half"])
-    iq_rel = (
-        (stats["quiescent_current_ua"]["second_half"] / stats["quiescent_current_ua"]["first_half"] - 1.0)
-        if stats["quiescent_current_ua"]["first_half"]
-        else 0.0
+
+    # Level check against the leakage model: what Iq SHOULD be at the reported temperatures (per variant),
+    # versus what it is. ratio ≈ 1 -> current follows the reported temperature; ratio ≈ 0 -> it does not.
+    typical = {v: spec["limits"][v]["typical_quiescent_ua"] for v in ("A", "B")}
+    typ_mean = _mean([typical[r["variant"]] for r in rs])
+    expected_mean = _mean(
+        [typical[r["variant"]] * (1.0 + LEAKAGE_COEFF_PER_K * max(0.0, r["measurements"]["board_temp_c"] - 25.0)) for r in rs]
     )
-    expected_rel = 0.03 * max(0.0, t1_rise)  # the system-level leakage model, ~3 %/K (DS-MCU-XM32F7 §7.3 gives 3.5 %/K for the MCU alone)
+    model_rise = expected_mean - typ_mean
+    iq_rise = _mean(iq) - typ_mean
+    ratio = (iq_rise / model_rise) if model_rise >= MIN_MODEL_RISE_UA else None
 
     flags = []
     if temp_out:
         flags.append(f"T1 outside {tw['min']}–{tw['max']} °C in {temp_out}/{len(rs)} results ({tw['rule']})")
     if noise_out:
         flags.append(f"ambient noise above {nw['max']} dB(A) in {noise_out}/{len(rs)} results ({nw['rule']})")
-    relation = "not assessable"
-    if t1_rise >= 3.0:
-        if iq_rel >= 0.5 * expected_rel and iq_rel > 0.02:
-            relation = "iq_follows_t1"
-            flags.append(
-                f"Iq rose {100 * iq_rel:.1f} % while T1 rose {t1_rise:.1f} K - consistent with the leakage model "
-                f"(~{100 * expected_rel:.0f} % expected)"
-            )
-        else:
-            relation = "decoupled"
-            flags.append(
-                f"T1 rose {t1_rise:.1f} K but Iq changed only {100 * iq_rel:.1f} % (model expects ~{100 * expected_rel:.0f} %) "
-                "- temperature reading and current do not agree; check the T1 sensor"
-            )
-    elif corr is not None and abs(corr) < 0.2 and temp_out:
-        relation = "decoupled"
-        flags.append("T1 is outside the window but Iq does not track it (|r| < 0.2) - check the T1 sensor")
-    elif corr is not None and corr > 0.5:
+    if ratio is None:
+        relation = "not assessable"
+        note = f"reported T1 close to nominal (model expects only +{model_rise:.0f} µA) - nothing to judge"
+    elif ratio >= 0.5:
         relation = "iq_follows_t1"
+        note = (
+            f"Iq is +{iq_rise:.0f} µA above the 25 °C level, the leakage model expects +{model_rise:.0f} µA at the reported T1 - consistent"
+        )
+        flags.append(note)
+    else:
+        relation = "decoupled"
+        note = (
+            f"reported T1 (mean {stats['board_temp_c']['mean']} °C) would raise Iq by ~{model_rise:.0f} µA, "
+            f"measured rise is {iq_rise:+.0f} µA "
+            "- temperature reading and current do not agree; check the T1 sensor before treating these results as invalid"
+        )
+        flags.append(note)
 
     return {
         "tested": len(rs),
@@ -96,6 +102,13 @@ def describe_signal(results: list[dict], spec: dict | None = None) -> dict:
         "stats": stats,
         "iq_t1_correlation": round(corr, 2) if corr is not None else None,
         "iq_t1_relation": relation,
+        "iq_model": {
+            "typical_ua": round(typ_mean, 1),
+            "expected_at_reported_t1_ua": round(expected_mean, 1),
+            "measured_ua": round(_mean(iq), 1),
+            "ratio": round(ratio, 2) if ratio is not None else None,
+            "note": note,
+        },
         "flags": flags,
         "spec": {"doc_id": spec["doc_id"], "revision": spec["revision"]},
     }

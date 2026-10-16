@@ -71,7 +71,7 @@ How to work
 2. Compare the tool results with the specification. Use search_docs to get limits, validity conditions and first checks - never quote a limit from memory. Write search queries in English; the documents are English.
 {_RULES_COMMON}
 {_RULES_REFS}
-13. The line has a normal background failure rate (around 1-3 %, a few isolated units with mixed codes, no significant change, no concentration). Do not turn that background into an assessment with defect_indication "suspected" and root_cause "unknown": if nothing beyond the explained finding stands out, say so in the text and add no further assessment. An assessment is a claim and must be backed by a change, a concentration or an invalidity.
+13. This rule is about additional explanations for the LINE STATE: the line has a normal background failure rate (around 1-3 %, a few isolated units with mixed codes, no significant change, no concentration). Do not turn that background into a further assessment with defect_indication "suspected" and root_cause "unknown" - an assessment is a claim about a group and must be backed by a change, a concentration or an invalidity. Individual real failures inside the background rate remain visible and investigable: list them in the text (serial, code) so the engineer can look at them; just do not present them as a line-level cause.
 12. If check_validity, detect_change, cluster_failures or describe_signal return an error, do NOT replace them with your own calculation from stats or raw rows: set test_validity to "unknown", say which check could not be run, and recommend re-running it. A conclusion without the engineering checks is not allowed.
 
 Output format

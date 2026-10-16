@@ -26,6 +26,7 @@ from .models import (
     Fault,
     GroupStats,
     Measurements,
+    SensorOffset,
     StationInfo,
     StatsResponse,
     TemperatureDrift,
@@ -279,6 +280,9 @@ class Simulator:
                 temp += f.delta_c * progress
         return temp + self._rng.gauss(0, 0.4)
 
+    def _sensor_offset(self, station: int) -> float:
+        return sum(af.fault.offset_c for af in self._faults.values() if isinstance(af.fault, SensorOffset) and af.fault.station == station)
+
     def _station_noise(self, station: int) -> float:
         noise = NOISE_NOMINAL_DB + self._rng.gauss(0, 1.5)
         for af in self._faults.values():
@@ -289,11 +293,12 @@ class Simulator:
 
     def _test_unit(self, info: StationInfo, variant: Variant, lot: str, now: datetime) -> TestResult:
         rng = self._rng
-        temp = self._station_temp(info.station, now)
+        temp_phys = self._station_temp(info.station, now)
+        temp = temp_phys + self._sensor_offset(info.station)  # what the station REPORTS; physics uses temp_phys
         noise_db = self._station_noise(info.station)
 
         q_mean, q_sd = QUIESCENT_NOMINAL[variant]
-        leakage_factor = 1.0 + LEAKAGE_COEFF_PER_K * max(0.0, temp - 25.0)
+        leakage_factor = 1.0 + LEAKAGE_COEFF_PER_K * max(0.0, temp_phys - 25.0)
         quiescent = rng.gauss(q_mean * leakage_factor, q_sd)
 
         operating = rng.gauss(1.7, 0.18)
