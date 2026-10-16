@@ -382,6 +382,8 @@ def run_b1(question: str, model: str | None = None) -> AskResult:
             usage.output_tokens += u.completion_tokens or 0
             r.answer = resp.choices[0].message.content or ""
             r.stop_reason = resp.choices[0].finish_reason
+            if r.stop_reason == "length":
+                r.error = "answer truncated (max_completion_tokens)"
         else:
             import anthropic
 

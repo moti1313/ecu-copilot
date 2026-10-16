@@ -128,7 +128,8 @@ def score(sc: dict, r, chunks, spec) -> dict:
         "next_test_ok": next_ok,
         "block_units_ok": block_ok,
         "components_ok": comps_ok,
-        "prov_live": ver["provenance"]["live"],
+        # systems on the V1 schema carry no refs: live provenance is not applicable, not zero
+        "prov_live": ver["provenance"]["live"] if any("ref" in e for e in rep.get("evidence", [])) else {"ok": 0, "total": 0},
         "prov_docs": ver["provenance"]["docs"],
         "supp_docs": ver["support"]["docs"],
         "n_evidence": len(rep.get("evidence", [])),
