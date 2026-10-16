@@ -30,7 +30,7 @@ AGENT_MODEL = os.environ.get("AGENT_MODEL") or _DEFAULT_MODELS.get(LLM_PROVIDER,
 JUDGE_MODEL = os.environ.get("JUDGE_MODEL") or _DEFAULT_MODELS.get(LLM_PROVIDER, _DEFAULT_MODELS["anthropic"])[1]
 AGENT_EFFORT = os.environ.get("AGENT_EFFORT") or "medium"  # low | medium | high
 AGENT_MAX_TOKENS = int(os.environ.get("AGENT_MAX_TOKENS", "8000"))
-PROMPT_VERSION = "2026-10-15.1"  # bump when the system prompt changes; logged with every answer
+PROMPT_VERSION = "2026-10-16.1"  # bump when the system prompt changes; logged with every answer
 
 # USD per 1M tokens: (input, output, cache_write, cache_read). Used for the cost log only.
 PRICING = {

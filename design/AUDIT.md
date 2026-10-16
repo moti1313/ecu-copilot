@@ -47,6 +47,9 @@ Front matter trägt `revision`, aber Retrieval ignoriert sie. Ein veraltetes Dok
 - UI: Cursor-Synchronisation nur für T1/U1; Belege sind nicht zeitlich verknüpft.
 - Keine Mehrrunden-Konversation (jede Frage startet bei null).
 
+### 2.7 Ungeklärt: Testhänger in einem externen Review (16.10.2026)
+Ein zweiter Prüfer berichtete, der vollständige `pytest`-Lauf sei nach 16 Tests hängen geblieben (abgebrochen), nachdem ein störendes ROS-Pytest-Plugin deaktiviert worden war. In dieser Umgebung lief die Suite mehrfach vollständig durch (34 Tests, ~2,5 s, mit `PYTHONPATH=` gegen das ROS-Plugin). **Ursache nicht reproduziert und nicht geklärt.** Verdacht: Wechselwirkung des `twin_client`-Fixtures (TestClient mit Lifespan und Hintergrund-Tasks) mit der anderen Plugin-Konfiguration. Offen, bis es in einer zweiten Umgebung (CI) reproduziert oder ausgeschlossen ist.
+
 ## 3. Was V1 richtig gemacht hat (nicht anfassen)
 - Strukturierter Report mit Evidenzstärke statt Konfidenzzahl – deckt sich mit Westermo.
 - Single-Agent mit wenigen, klar beschriebenen Tools – deckt sich mit Westermo.

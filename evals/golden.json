@@ -77,6 +77,19 @@
       "rubric": "Separates failures by lot, names L2439-07 as the affected lot, concludes real failure (E-120 is not environmental, WI-EOL-PSEUDO §3), points to connector J3 solder/press-fit (FMEA-DCU-B2 item 7), recommends blocking/separating by lot."
     },
     {
+      "id": "live-drift-and-bad-lot",
+      "question": "An Station 2 steigt die Ausfallrate bei Variante B. Was ist los? Gibt es mehr als eine Ursache?",
+      "setup": [
+        {"type": "temperature_drift", "station": 2, "delta_c": 10, "ramp_s": 0},
+        {"type": "bad_lot", "variant": "B", "lot": "L2439-07", "fail_rate": 0.25}
+      ],
+      "settle_seconds": 150,
+      "expected_tools": ["get_station_stats", "get_recent_results", "search_docs"],
+      "facts": [["E-204"], ["E-120"], ["L2439-07"], ["32"]],
+      "forbidden": ["alle Fehler sind Pseudo", "all failures are pseudo"],
+      "rubric": "Two concurrent causes must both be reported: (1) E-204 failures at station 2 occur at T1 above 32 °C, so those results are INVALID per TS-DCU-EOL §4.2 - the units are not assessable, not 'fine'; (2) E-120 failures concentrate on lot L2439-07, which is a real connector-lot problem (FMEA-DCU-B2 item 7) that the temperature does not explain. The answer must not collapse everything into 'pseudo failure' and must recommend both: re-test after cooling AND separate/block the lot."
+    },
+    {
       "id": "unknown-not-invented",
       "question": "Wie hoch ist die Grenze für den Isolationswiderstand im EOL-Test?",
       "setup": [],

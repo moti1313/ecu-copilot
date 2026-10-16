@@ -99,7 +99,12 @@ Umfang: **Phase 1 = 12 Szenarien** (S01–S05, S08, S11–S15, S04), **Endausbau
 
 Reihenfolge ist fix: **erst messen (1), dann testen (2), dann schön (4).**
 
-## 8. Offene Entscheidungen
+## 8. Entscheidungen vom 16.10.2026
+- **Phase 0 starten**, danach **S01 und S08 vollständig und reproduzierbar** (Phase-1-Durchstich), erst dann der Rest.
+- **Jev zurückgestellt.** Bleibt als Option in `ARCHITECTURE.md` §4.4 beschrieben, wird vor Abschluss von Phase 2 nicht gebaut.
+- Die vier Punkte aus Review 2 (strukturierte Belegzuordnung, getrennte Bewertung von Prüfgültigkeit und Bauteilfehler, faire Baselines mit Bezugsgrößen, Re-Test derselben Einheiten mit erhaltenen Defekten) sind in §5 (Metriken) und §7 (Abnahme Phase 1/2) und in `ARCHITECTURE.md` §3/§4 festgehalten.
+
+## 9. Noch offene Entscheidungen (blockieren Phase 0/1 nicht)
 1. Modell für den Benchmark: gpt-5 (teurer, 60 Läufe ≈ 4 $) oder gpt-5-mini (≈ 1 $, evtl. schlechter)? Vorschlag: beide, das ist selbst ein Ergebnis.
 2. Judge: gpt-5-mini (gleiche Familie) oder – bei verfügbarem unabhängigem Modellzugang – claude-haiku als unabhängiger Judge? Vorschlag: Haiku, wenn verfügbar.
 3. Soll der Twin Firmware-Version und Sensor-Offset als Störungstypen bekommen (für S05/S06)? Vorschlag: ja, es sind ~40 Zeilen.

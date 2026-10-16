@@ -82,7 +82,13 @@ class Simulator:
             return active
 
     def faults(self) -> list[ActiveFault]:
-        return list(self._faults.values())
+        with self._lock:
+            return list(self._faults.values())
+
+    def _snapshot(self) -> list[TestResult]:
+        """Readers copy under the lock: iterating the deque while a station appends raises RuntimeError."""
+        with self._lock:
+            return list(self._results)
 
     def clear_faults(self, fault_id: int | None = None) -> int:
         with self._lock:
@@ -104,7 +110,7 @@ class Simulator:
     ) -> list[TestResult]:
         cutoff = (now or _utcnow()) - timedelta(minutes=minutes) if minutes else None
         out: list[TestResult] = []
-        for r in reversed(self._results):  # newest first
+        for r in reversed(self._snapshot()):  # newest first
             if cutoff and r.timestamp < cutoff:
                 break
             if station is not None and r.station != station:
@@ -126,7 +132,7 @@ class Simulator:
         cutoff = now - timedelta(minutes=minutes)
         buckets: dict[int, list[TestResult]] = {}
         fails: list[dict] = []
-        for r in reversed(self._results):
+        for r in reversed(self._snapshot()):
             if r.timestamp < cutoff:
                 break
             if r.station != station or (variant is not None and r.variant != variant):
@@ -188,7 +194,7 @@ class Simulator:
         now = now or _utcnow()
         cutoff = now - timedelta(minutes=minutes)
         buckets: dict[tuple[int, Variant], list[TestResult]] = {}
-        for r in reversed(self._results):
+        for r in reversed(self._snapshot()):
             if r.timestamp < cutoff:
                 break
             buckets.setdefault((r.station, r.variant), []).append(r)
@@ -217,9 +223,9 @@ class Simulator:
         """Test one unit at `station` and store the result."""
         now = now or _utcnow()
         info = next(s for s in STATIONS if s.station == station)
-        variant = self._pick_variant(info)
-        lot = self._pick_lot(variant)
-        with self._lock:
+        with self._lock:  # the whole tick: RNG, fault table and result deque are shared state
+            variant = self._pick_variant(info)
+            lot = self._pick_lot(variant)
             result = self._test_unit(info, variant, lot, now)
             self._results.append(result)
             return result

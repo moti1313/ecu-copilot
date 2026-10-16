@@ -2,6 +2,7 @@
 
 import json
 from datetime import timedelta
+from types import SimpleNamespace
 
 from fastapi.testclient import TestClient
 
@@ -63,12 +64,13 @@ def test_copilot_bom_and_decisions(tmp_path, monkeypatch):
     from ecu_copilot.copilot import api
 
     monkeypatch.setattr(api, "DECISIONS_FILE", tmp_path / "decisions.jsonl")
-    api.state.update({"metrics": None, "index": None, "copilot": None})
+    monkeypatch.setattr(api, "INVESTIGATIONS_FILE", tmp_path / "investigations.jsonl")
+    api.state.update({"metrics": None, "index": None, "copilot": None, "investigations": {}})
     client = TestClient(api.app)  # no lifespan: endpoints that don't need the agent
     assert any(p["part_number"] == "HB4821-QHTS28" for p in client.get("/bom").json()["parts"])
-    r = client.post(
-        "/decisions", json={"trace_id": "abc", "question": "q", "decision": "approve_test", "next_test": "Re-Test", "engineer": "M. Molaei"}
-    )
-    assert r.status_code == 201 and r.json()["decision"] == "approve_test"
-    assert client.get("/decisions").json()[0]["trace_id"] == "abc"
-    assert client.post("/decisions", json={"question": "q", "decision": "launch_rocket"}).status_code == 422
+    fake = SimpleNamespace(trace_id="abc", provider="openai", model="m", prompt_version="p", error=None, report=None)
+    inv_id = api._store_investigation("q", fake)
+    r = client.post("/decisions", json={"investigation_id": inv_id, "decision": "approve_test", "engineer": "M. Molaei"})
+    assert r.status_code == 201 and r.json()["decision"] == "approve_test" and r.json()["trace_id"] == "abc"
+    assert client.get("/decisions").json()[0]["investigation_id"] == inv_id
+    assert client.post("/decisions", json={"investigation_id": inv_id, "decision": "launch_rocket"}).status_code == 422

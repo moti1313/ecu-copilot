@@ -72,7 +72,8 @@ Try it: click **Temperaturdrift St. 2**, wait a minute, ask
 
 ```bash
 uv run ruff check . && uv run ruff format --check .
-uv run pytest                        # 34 tests, no API key, no model download (RAG_MODE=bm25 in CI)
+uv run pytest                        # no API key, no model download (RAG_MODE=bm25 in CI)
+# If a ROS 2 workspace is sourced in your shell, its pytest plugins break collection: PYTHONPATH= uv run pytest
 uv run python evals/run.py           # golden set against the live agent; needs twin running + API key
 uv run python evals/run.py --only live-drift-pseudo-failure --no-judge
 ```

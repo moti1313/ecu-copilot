@@ -393,7 +393,7 @@ async function ask() {
   clearInterval(timer); btn.disabled = false; $('busy').hidden = true; $('busyText').textContent = 'Agent arbeitet …'; refreshOps();
 }
 const SUP = {strong:'Evidenz: stark', moderate:'Evidenz: mittel', weak:'Evidenz: schwach', rejected:'verworfen'};
-const FINDING = {pseudo_failure:'Pseudo-Fehler (Prüfumgebung)', real_failure:'Echter Fehler (Gerät)', unclear:'Unklar – Test erforderlich', information:'Information'};
+const FINDING = {pseudo_failure:'Prüfung ungültig (Umgebung) – Bauteil nicht bewertbar, Wiederholung nötig', real_failure:'Hinweis auf Bauteilfehler', unclear:'Unklar – Test erforderlich', information:'Information'};
 function renderInvestigation(r) {
   const rep = r.report;
   $('steps').innerHTML = r.tool_calls.length ? r.tool_calls.map((c,i) => `<div class="step"><span class="n">${i+1}</span><span class="t">${esc(c.name)}</span><span class="s" title="${esc(JSON.stringify(c.input))} → ${esc(c.result_preview)}">${esc(c.summary || c.result_preview)}</span><span class="d">${c.duration_ms ? c.duration_ms + ' ms' : ''}</span></div>`).join('') + `<div class="step"><span class="n">${r.tool_calls.length+1}</span><span class="t">Antwort</span><span class="s">${r.iterations} Modell-Aufrufe · ${esc(FINDING[rep?.finding] || (r.error ? 'Fehler' : 'Text'))}</span><span class="d">${r.latency_s} s</span></div>` : `<div class="empty ${r.error?'flag':''}">${esc(r.error || 'keine Werkzeuge benötigt')}</div>`;
@@ -411,10 +411,16 @@ function renderMeta(r) {
   const u = r.usage || {};
   $('meta').innerHTML = `<span>${r.iterations} Modell-Aufrufe</span><span>${r.tool_calls.length} Werkzeuge</span><span>Tokens <b>${u.input_tokens}</b>/<b>${u.output_tokens}</b> · Cache ${u.cache_read_input_tokens}</span><span>Kosten <b>${(r.cost_usd||0).toFixed(4)} $</b></span><span><b>${r.latency_s} s</b></span>${r.citation_missing ? '<span class="flag">Guardrail: keine Quellenangabe</span>' : ''}${r.error ? `<span class="flag">${esc(r.error)}</span>` : ''}<span class="mono">Prompt ${esc(r.prompt_version)}</span>${r.trace_id ? `<a href="${S.cfg.jaeger_url}/trace/${r.trace_id}" target="_blank" rel="noopener">Trace ${r.trace_id.slice(0,8)} ↗</a>` : ''}`;
 }
+const DECISION_LABEL = {approve_test:'Entscheidung protokolliert: Test freigegeben', block_units:'Entscheidung protokolliert: Sperrung beantragt', reject:'Entscheidung protokolliert: abgelehnt', request_8d:'Entscheidung protokolliert: 8D angefordert'};
 async function decide(d) {
-  if (!S.last) return;
-  const body = { trace_id: S.last.trace_id, question: $('q').value.slice(0, 4000), decision: d, next_test: S.report?.next_test?.title || null, engineer: $('engineer').value };
-  try { await fetch('/decisions', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(body)}); $('decided').textContent = ({approve_test:'Test freigegeben', block_units:'Sperrung veranlasst', reject:'Abgelehnt'})[d] + ' · protokolliert'; refreshOps(); } catch (e) { $('decided').textContent = 'Fehler: ' + e.message; }
+  if (!S.last?.investigation_id) { $('decided').textContent = 'Keine gespeicherte Untersuchung – erst fragen.'; return; }
+  const body = { investigation_id: S.last.investigation_id, decision: d, engineer: $('engineer').value };
+  try {
+    const r = await fetch('/decisions', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(body)});
+    if (!r.ok) { const err = await r.json().catch(() => ({})); $('decided').textContent = `Nicht gespeichert (HTTP ${r.status}): ${err.detail || ''}`; return; }
+    $('decided').textContent = DECISION_LABEL[d] + ' – noch nicht ausgeführt (Re-Test/Sperrung folgen in Phase 2)';
+    refreshOps();
+  } catch (e) { $('decided').textContent = 'Fehler: ' + e.message; }
 }
 async function fault(f) { await fetch(`${S.cfg.twin_url}/faults`, {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(f)}); poll(); }
 async function clearFaults() { await fetch(`${S.cfg.twin_url}/faults`, {method:'DELETE'}); poll(); }
@@ -424,7 +430,7 @@ async function refreshOps() {
     const m = await (await fetch('/metrics')).json();
     $('kpis').innerHTML = m.questions ? [['Fragen', m.questions], ['Kosten', m.total_cost_usd.toFixed(2)+' $'], ['Ø Kosten', m.avg_cost_usd.toFixed(3)+' $'], ['Ø Latenz', m.avg_latency_s+' s'], ['p95', m.p95_latency_s+' s'], ['Cache', Math.round(m.cache_hit_ratio*100)+' %'], ['ohne Quelle', m.citation_missing], ['Fehler', m.errors]].map(([l,v]) => `<div class="kpi"><b>${v}</b><span>${l}</span></div>`).join('') : '<div class="kpi"><span>noch keine Fragen</span></div>';
     const d = await (await fetch('/decisions?n=4')).json();
-    $('declog').innerHTML = d.length ? d.map(x => `<div><span class="mono">${x.timestamp.slice(11,16)}</span><span>${({approve_test:'Test freigegeben', block_units:'Sperrung', reject:'abgelehnt', request_8d:'8D'})[x.decision]}</span><span class="muted" style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">${esc(x.next_test || x.question)}</span><span class="mono">${esc((x.trace_id||'').slice(0,8))}</span></div>`).join('') : '<div class="empty">noch keine Freigabe</div>';
+    $('declog').innerHTML = d.length ? d.map(x => `<div><span class="mono">${x.timestamp.slice(11,16)}</span><span>${({approve_test:'Test freigegeben', block_units:'Sperrung beantragt', reject:'abgelehnt', request_8d:'8D'})[x.decision]} <span class="muted">(protokolliert)</span></span><span class="muted" style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">${esc(x.next_test || x.question)}</span><span class="mono">${esc((x.trace_id||'').slice(0,8))}</span></div>`).join('') : '<div class="empty">noch keine Freigabe</div>';
   } catch {}
 }
 init();

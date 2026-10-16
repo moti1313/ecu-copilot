@@ -89,6 +89,13 @@ def _retry(fn, *args, attempts: int = 5, wait_s: float = 3.0):
     return None
 
 
+def pass_rate(rows: list[dict]) -> tuple[int, int, float]:
+    """Skipped cases count as failed: a gate must not pass because the live scenarios never ran."""
+    passed = sum(1 for r in rows if r["status"] == "pass")
+    skipped = sum(1 for r in rows if r["status"] == "skipped")
+    return passed, skipped, (passed / len(rows) if rows else 0.0)
+
+
 def check_facts(case: dict, answer: str) -> tuple[list[str], list[str]]:
     low = answer.lower()  # case-insensitive: "Echter Fehler" must satisfy "echt"
     missing = [" / ".join(alts) for alts in case["facts"] if not any(a.lower() in low for a in alts)]
@@ -172,11 +179,10 @@ def main() -> int:
         )
         print(f"  {mark:4} {case['id']:28} {r.latency_s:5.1f}s  {r.cost_usd:.4f}$  {detail}")
 
-    scored = [r for r in rows if r["status"] != "skipped"]
-    passed = sum(1 for r in scored if r["status"] == "pass")
-    rate = passed / len(scored) if scored else 0.0
+    passed, skipped, rate = pass_rate(rows)
     print(
-        f"\n[evals] {passed}/{len(scored)} passed ({rate:.0%}), {len(rows) - len(scored)} skipped, cost {total_cost:.3f} $, model {config.AGENT_MODEL}, prompt {config.PROMPT_VERSION}"
+        f"\n[evals] {passed}/{len(rows)} passed ({rate:.0%}), {skipped} skipped (count as failed), cost {total_cost:.3f} $, "
+        f"model {config.AGENT_MODEL}, prompt {config.PROMPT_VERSION}"
     )
 
     out_dir = config.DATA_DIR / "evals"
