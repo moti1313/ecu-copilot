@@ -82,6 +82,37 @@ The eval has three layers per case - expected tools called (deterministic), key 
 (deterministic), rubric satisfied (LLM-as-judge). It exits non-zero below `EVAL_MIN_PASS` (0.8),
 which is the gate in the manual `eval` job of `.gitlab-ci.yml` / GitHub Actions.
 
+## V2: deterministic evidence, verified, benchmarked
+
+The literature on LLM agents for root-cause analysis is consistent on one point: the most frequent
+failure is a coherent story the data does not support, and prompting does not fix it - checking does
+(see `design/RESEARCH.md`). V2 therefore adds three things in front of and behind the model:
+
+1. **Engineering layer** (`src/ecu_copilot/engineering/`, no LLM): `check_validity` (which FAIL verdicts
+   are INVALID per the machine-readable spec `docs/spec/TS-DCU-EOL.json`, consistency-tested against the
+   markdown), `detect_change` (change-point scan: onset, levels, z), `cluster_failures` (lot / firmware /
+   station concentration with exposure-aware lift, rate ratio and z), `describe_signal` (descriptors,
+   Iq-T1 relation incl. the sensor-fault signature). The agent is told to call these before it claims
+   anything about validity, trends or lots - it integrates and explains, it does not compute.
+2. **Report schema V2**: `assessments` per affected group with *test validity* separate from *defect
+   indication* (an invalid test says nothing about the unit; concurrent causes are two entries),
+   hypotheses with a *discriminating* test, evidence items with a structured `ref` (tool call, field,
+   station, variant, window, value / doc, revision, section).
+3. **Verification** (`copilot/verify.py`, no LLM): *provenance* - does the ref resolve to this run's tool
+   output for exactly that scope and value, does the cited document / section / revision exist; and
+   *support* - spec comparisons for live refs, keyword overlap for documents (a heuristic, named as such).
+   The UI shows both marks per evidence item.
+
+`AGENT_PROFILE=v1|v2` keeps the original agent available for comparison. The **benchmark**
+(`evals/bench.py`) runs scenarios with known truth (`evals/scenarios/`) against four systems - **B0** a
+fair rule engine on the same engineering tools, **B1** single-call RAG without tools, **V1**, **V2** -
+with repeats, a solvability check per scenario, and the metrics from `design/CONCEPT.md` §5. Results are
+appended to `design/RESULTS.md`.
+
+```bash
+uv run python evals/bench.py --scenarios S01,S08 --systems b0,b1,v1,v2 --repeats 3
+```
+
 ## The investigation workspace
 
 The agent's final message is a structured **investigation report** (JSON schema enforced on both
