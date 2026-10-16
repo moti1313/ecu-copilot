@@ -181,7 +181,8 @@ aside { display:flex; flex-direction:column; gap:18px; min-width:0; }
 .production .stations { margin-bottom:14px; }.production .station-card { cursor:default; padding:18px; }.production .station-card.selected { padding:17px; }.production .station-card:hover { box-shadow:none; }
 .station-select { border:0; background:none; padding:3px 0; color:var(--ink); font-weight:600; font-size:15px; text-align:left; }.station-select:hover { color:var(--cite); }.station-select[aria-pressed=true] { color:var(--cite); }
 .production .station-state { font-size:11px; }.station-observation { border:1px solid var(--line); border-radius:9px; padding:14px; margin-top:14px; background:#f9fbfb; }
-.unit-heading { display:flex; align-items:center; justify-content:space-between; gap:8px; color:var(--muted); font-size:11px; }.unit-id { font:12px var(--mono); display:block; margin:9px 0 5px; overflow-wrap:anywhere; }.unit-meta { color:var(--muted); font-size:11px; }.unit-result { display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin:14px 0 6px; }.verdict { display:inline-flex; border-radius:5px; border:1px solid #c8e0d3; background:#eaf4ee; color:#286149; font:11px var(--mono); padding:3px 7px; }.verdict.fail { color:#9a4b24; border-color:#e4c5ad; background:#fff0e4; }.unit-result strong { font-size:13px; font-weight:500; }.unit-measurement { font-size:12px; color:#455f69; margin:5px 0; min-height:38px; }.station-inspect { width:100%; background:white; border:1px solid var(--line); border-radius:6px; padding:9px 12px; color:var(--cite); font-size:12px; margin-top:10px; }
+.unit-heading { display:flex; align-items:center; justify-content:space-between; gap:8px; color:var(--muted); font-size:11px; }.unit-id { font:12px var(--mono); display:block; margin:9px 0 5px; overflow-wrap:anywhere; }.unit-meta { color:var(--muted); font-size:11px; }.unit-result { display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin:14px 0 6px; }.verdict { display:inline-flex; border-radius:5px; border:1px solid #c8e0d3; background:#eaf4ee; color:#286149; font:11px var(--mono); padding:3px 7px; }.verdict.fail { color:#9a4b24; border-color:#e4c5ad; background:#fff0e4; }.unit-result strong { font-size:13px; font-weight:500; }.unit-measurement { font-size:12px; color:#455f69; margin:5px 0; min-height:38px; }.station-last-failure { display:block; width:100%; border:0; background:none; color:#98521f; font-size:12px; padding:10px 2px 0; text-align:left; }
+.station-inspect { width:100%; background:white; border:1px solid var(--line); border-radius:6px; padding:9px 12px; color:var(--cite); font-size:12px; margin-top:10px; }
 .production .station-bottom { margin-top:14px; font-size:11px; }.production .station-bottom span { overflow-wrap:anywhere; }
 .flow-explainer { display:flex; flex-wrap:wrap; justify-content:space-between; gap:10px; padding:12px 2px; font-size:12px; color:var(--muted); }.flow-explainer b { font-weight:500; color:#37555c; }.flow-explainer .flow-arrow { margin:0 8px; color:#829b9e; }
 .recent-production { border:1px solid var(--line); background:white; border-radius:10px; overflow:hidden; }.recent-production summary { font-size:13px; color:var(--ink); padding:16px 18px; }.recent-controls { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; padding:0 18px 12px; font-size:12px; color:var(--muted); }.recent-controls select { border:1px solid var(--line); border-radius:5px; padding:7px 10px; background:white; color:var(--ink); }
@@ -215,7 +216,7 @@ aside { display:flex; flex-direction:column; gap:18px; min-width:0; }
     <div class="production-heading"><div><span class="zone-caption">Beobachtete Prüfungen · Digital Twin</span><h2 id="productionTitle">Die Produktionslinie, Prüfung für Prüfung.</h2><p>Drei Stationen prüfen parallel. Hier sehen Sie die zuletzt abgeschlossenen Prüfungen und ihre Ergebnisse.</p></div><div class="production-tools"><span id="productionStatus" class="production-status" data-state="stale" role="status">Prüfdaten werden geladen</span><button class="btn" id="pauseProduction" type="button" aria-pressed="false">Prüfliste pausieren</button></div></div>
     <section class="demo-zone" aria-labelledby="demoTitle"><span class="zone-caption" id="demoTitle">Demo-Störung · Betreiberwissen</span><p>Hier steht, was in der Simulation eingestellt ist. Der Copilot erhält diese Störungsinformationen nicht als Analysebeleg.</p><div id="productionFaults" class="demo-faults"><span class="muted">Aktive Störungen werden geladen.</span></div></section>
     <div id="stationCards" class="stations" aria-label="Letzte abgeschlossene Prüfung je Station"></div>
-    <div class="flow-explainer"><span><b>Einheit</b><span class="flow-arrow" aria-hidden="true">→</span><b>Prüfung</b><span class="flow-arrow" aria-hidden="true">→</span><b>Pass / Fail</b></span><span>Der Twin liefert fertige Prüfergebnisse. Der Ablauf einer Einheit ist über „Prüfung ansehen“ nachvollziehbar.</span></div>
+    <div class="flow-explainer"><span><b>Einheit</b><span class="flow-arrow" aria-hidden="true">→</span><b>Prüfung</b><span class="flow-arrow" aria-hidden="true">→</span><b>Pass / Fail</b></span><span>Beschleunigte Simulation · Der Ablauf einer abgeschlossenen Prüfung ist über „Prüfung ansehen“ nachvollziehbar.</span></div>
     <details class="recent-production" id="recentProduction"><summary><span>Die letzten Prüfungen ansehen</span><span id="recentCount"></span></summary><div class="recent-controls"><label for="productionFilter">Anzeige <select id="productionFilter"><option value="all">Alle Ergebnisse</option><option value="failed">Nur fehlgeschlagene Prüfungen</option></select></label><span id="productionListNote">Neueste Ergebnisse zuerst</span></div><div class="production-list" id="productionList"></div></details>
   </section>
   <main class="work">
@@ -323,6 +324,208 @@ const limitFor = v => (S.series?.limits?.quiescent_max_ua?.[v]) ?? (v==='A'?350:
 const nominal = v => v==='A' ? 240 : 330;  // typical at 25 °C (TS-DCU-EOL §5)
 const expected = (v, t) => Math.round(nominal(v) * (1 + 0.03 * Math.max(0, t - 25)));
 
+const PRODUCTION_REFERENCE = JSON.parse($('productionReference').textContent);
+const P = {rows:[], viewRows:[], viewStats:null, paused:false, stream:null, streamOpen:false, lastFetch:0, lastEvent:0, fetchFailed:false, fetching:false, faultKnown:false, faults:[], faultFailed:false, lastFaultAt:0, inspected:null};
+const TEST_SEQUENCE = [
+  {code:'E-120', name:'LIN-Kommunikation', section:'4.1', field:'lin_comm_ok'},
+  {code:'E-401', name:'Firmware flashen und prüfen', section:'4.5', field:'flash_time_s'},
+  {code:'E-204', name:'Ruhestrom messen', section:'4.3', field:'quiescent_current_ua'},
+  {code:'E-205', name:'Motorstrom messen', section:'4.4', field:'operating_current_a'},
+  {code:'E-310', name:'Akustik prüfen', section:'6.1', field:'acoustic_score'},
+];
+const FAILURE_LABELS = {'E-120':'Keine LIN-Kommunikation','E-401':'Flash-Zeit überschritten','E-204':'Ruhestrom zu hoch','E-205':'Motorstrom außerhalb der Vorgabe','E-310':'Akustikprüfung fehlgeschlagen'};
+const resultKey = row => JSON.stringify([row.station,row.id,row.timestamp,row.serial]);
+const fmtSeconds = iso => new Date(iso).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+const numberText = (value, digits=1) => value == null || !Number.isFinite(Number(value)) ? '—' : Number(value).toLocaleString('de-DE',{maximumFractionDigits:digits});
+function validProductionRow(row) {
+  return row && Number.isInteger(row.id) && [1,2,3].includes(row.station) && ['A','B'].includes(row.variant) && ['pass','fail'].includes(row.verdict) && typeof row.serial === 'string' && Number.isFinite(Date.parse(row.timestamp)) && row.measurements && typeof row.measurements === 'object';
+}
+function mergedProductionRows(rows) {
+  const byKey = new Map();
+  rows.filter(validProductionRow).forEach(row => byKey.set(resultKey(row), row));
+  return [...byKey.values()].sort((a,b) => Date.parse(b.timestamp)-Date.parse(a.timestamp) || b.id-a.id).slice(0,120);
+}
+function productionStale() {
+  const received = Math.max(P.lastFetch,P.lastEvent);
+  const latest = P.rows[0];
+  return !received || Date.now()-received > 18000 || !latest || Date.now()-Date.parse(latest.timestamp)>18000;
+}
+function renderProductionStatus() {
+  const status = $('productionStatus');
+  status.dataset.state = P.paused || productionStale() ? 'stale' : 'live';
+  status.textContent = P.paused ? 'Prüfliste pausiert · Twin läuft weiter' : !P.rows.length ? (P.fetchFailed ? 'Prüfdaten nicht erreichbar' : 'Warte auf Prüfergebnisse') : productionStale() ? 'Keine aktuellen Prüfungen · letzter Stand sichtbar' : P.streamOpen ? 'Live · neue Prüfungen werden empfangen' : 'Aktuell · regelmäßige Datenabfrage';
+  $('pauseProduction').textContent = P.paused ? 'Live-Ansicht fortsetzen' : 'Prüfliste pausieren';
+  $('pauseProduction').setAttribute('aria-pressed', String(P.paused));
+  if (P.faultKnown && Date.now()-P.lastFaultAt>15000) renderProductionFaults();
+}
+function renderProduction() {
+  if (!P.paused) { P.viewRows = P.rows.slice(); P.viewStats = S.stats; }
+  renderProductionStatus(); renderStations(); renderProductionList();
+}
+async function refreshProduction() {
+  if (P.fetching) return;
+  P.fetching = true;
+  try {
+    const rows = await getJSON(`${S.cfg.twin_url}/results?limit=90`);
+    if (!Array.isArray(rows)) throw new Error('Ungültige Prüfdaten');
+    const valid = rows.filter(validProductionRow);
+    const latest = Math.max(...valid.map(row => Date.parse(row.timestamp)),0);
+    // Replace old history on resync (including a twin reset), while retaining newer SSE events.
+    P.rows = mergedProductionRows([...valid,...P.rows.filter(row => Date.parse(row.timestamp)>latest && Date.now()-Date.parse(row.timestamp)<3000)]);
+    P.lastFetch = Date.now(); P.fetchFailed = false;
+  } catch { P.fetchFailed = true; }
+  finally { P.fetching = false; renderProduction(); }
+}
+function connectProductionStream() {
+  P.stream?.close();
+  if (typeof EventSource !== 'undefined') {
+    P.stream = new EventSource(`${S.cfg.twin_url}/events`);
+    P.stream.onopen = () => { P.streamOpen = true; renderProductionStatus(); refreshProduction(); };
+    P.stream.onmessage = event => {
+      let row; try { row = JSON.parse(event.data); } catch { return; }
+      if (!validProductionRow(row)) return;
+      P.lastEvent = Date.now(); P.rows = mergedProductionRows([row,...P.rows]); renderProduction();
+    };
+    P.stream.onerror = () => { P.streamOpen = false; renderProductionStatus(); refreshProduction(); };
+  }
+}
+function startProduction() {
+  refreshProduction(); connectProductionStream();
+  setInterval(refreshProduction,8000);
+  setInterval(renderProductionStatus,2000);
+  window.addEventListener('pagehide', () => P.stream?.close());
+  window.addEventListener('pageshow', event => { if (event.persisted) { connectProductionStream(); refreshProduction(); } });
+}
+function unitReading(row) {
+  const m = row.measurements, limits = PRODUCTION_REFERENCE.spec.limits;
+  if (row.failure_code === 'E-120') return 'LIN-Antwort fehlt · Steckverbindung und Los prüfen';
+  if (row.failure_code === 'E-401') return `${numberText(m.flash_time_s)} s · Grenze ${limits[row.variant].flash_max_s} s`;
+  if (row.failure_code === 'E-205') return `${numberText(m.operating_current_a,2)} A · Vorgabe ${limits.operating_current_a.join('–')} A`;
+  if (row.failure_code === 'E-310') return `Akustikscore ${numberText(m.acoustic_score)} · Umgebung ${numberText(m.ambient_noise_db)} dB(A)`;
+  return `${numberText(m.quiescent_current_ua)} µA · ${row.verdict === 'fail' ? 'Grenze ' + limits[row.variant].quiescent_max_ua + ' µA · ' : ''}${numberText(m.board_temp_c)} °C`;
+}
+function renderProductionList() {
+  const onlyFailed = $('productionFilter').value === 'failed';
+  const rows = P.viewRows.filter(row => !onlyFailed || row.verdict === 'fail').slice(0,24);
+  $('recentCount').textContent = `${rows.length} ${onlyFailed ? 'fehlgeschlagene' : 'letzte'}`;
+  $('productionListNote').textContent = P.paused ? 'Ansicht eingefroren · Simulation läuft weiter' : 'Neueste zuerst · auf 24 Einträge begrenzt';
+  const focusKey = document.activeElement?.closest('#productionList button')?.dataset.testKey;
+  $('productionList').innerHTML = rows.length ? `<div class="production-row production-row-labels" aria-hidden="true"><span>Zeit</span><span>Station</span><span>Einheit / Los</span><span>Stationsurteil</span><span></span></div>` + rows.map(row => `<div class="production-row"><span class="mono">${fmtSeconds(row.timestamp)}</span><span class="row-station">Station ${row.station}</span><span class="row-unit"><span class="mono">${esc(row.serial)}</span><small>Variante ${row.variant} · Los ${esc(row.lot)}</small></span><span class="row-outcome"><span class="verdict ${row.verdict==='fail' ? 'fail' : ''}">${row.verdict==='fail' ? 'FAIL · '+esc(row.failure_code || '?') : 'PASS'}</span></span><button type="button" data-test-key="${esc(resultKey(row))}" aria-label="Prüfung ${esc(row.serial)} ansehen">Ansehen ↗</button></div>`).join('') : `<div class="production-empty">${onlyFailed ? 'Keine fehlgeschlagenen Prüfungen in den geladenen Ergebnissen.' : 'Noch keine Prüfergebnisse geladen.'}</div>`;
+  if (focusKey) {
+    const button = [...document.querySelectorAll('#productionList button')].find(b=>b.dataset.testKey===focusKey);
+    (button || $('pauseProduction')).focus({preventScroll:true});
+  }
+}
+function renderProductionFaults() {
+  const area = $('productionFaults');
+  if (P.faultFailed || (P.faultKnown && Date.now()-P.lastFaultAt>15000)) { area.textContent = 'Aktive Störungen derzeit nicht abrufbar. Eine frühere Anzeige ist keine Aussage über den aktuellen Stationszustand.'; return; }
+  if (!P.faultKnown) { area.textContent = 'Aktive Störungen werden geladen.'; return; }
+  if (!P.faults.length) { area.textContent = 'Keine Demo-Störung aktiv. Das Modell enthält weiterhin normale Messstreuung und vereinzelte Fehler.'; return; }
+  area.innerHTML = P.faults.map(active => {
+    const fault = active.fault; let name, effect;
+    if (fault.type==='temperature_drift') { name=`Station ${fault.station} · Temperaturdrift`; effect=`Eingestellt: +${numberText(fault.delta_c)} °C, Rampe ${numberText(fault.ramp_s,0)} s. Im Modell steigt dadurch der Ruhestrom. Ob eine Einheit zusätzlich defekt ist, bleibt offen.`; }
+    else if (fault.type==='acoustic_noise') { name=`Station ${fault.station} · Umgebungslärm`; effect=`Eingestellt: ${numberText(fault.noise_db)} dB(A). Im Modell sinkt dadurch der Akustikscore; die beobachteten Ergebnisse stehen unten.`; }
+    else if (fault.type==='bad_lot') { name=`Los ${fault.lot} · Variante ${fault.variant}`; effect=`Eingestellte LIN-Fehlerwahrscheinlichkeit: ${numberText(fault.fail_rate*100)} %. Das Los kann an mehreren Stationen auftreten. Diese Einstellung ist keine gemessene Fehlerquote.`; }
+    else { name='Weitere Demo-Störung'; effect=fault.type; }
+    return `<div class="demo-fault"><b>${esc(name)}</b><span>${esc(effect)}</span><span>Aktiv seit ${fmtSeconds(active.started_at)}</span></div>`;
+  }).join('');
+}
+function findProductionRow(key) {
+  return [...P.viewRows,...P.rows,S.selectedProductionRow,S.requestProductionRow,P.inspected].filter(Boolean).find(row => resultKey(row)===key);
+}
+function showTest(key) {
+  const row = findProductionRow(key); if (!row) return;
+  P.inspected = structuredClone(row);
+  const m = row.measurements, spec = PRODUCTION_REFERENCE.spec, limits = spec.limits;
+  const failed = row.verdict==='fail';
+  $('testDialogTitle').textContent = `Station ${row.station} · ${failed ? 'Fehlgeschlagen' : 'Bestanden'}${row.failure_code ? ' · '+row.failure_code : ''}`;
+  $('testIdentity').innerHTML = `<span class="verdict ${failed?'fail':''}">${failed?'FAIL':'PASS'}</span><div class="test-identity"><span>Einheit <b class="mono">${esc(row.serial)}</b></span><span>Variante <b>${row.variant}</b></span><span>Los <b>${esc(row.lot)}</b></span><span>Zeit <b>${fmtSeconds(row.timestamp)}</b></span></div>`;
+  const temp = spec.validity.board_temp_c, noise = spec.validity.ambient_noise_db;
+  const hot = m.board_temp_c != null && (m.board_temp_c<temp.min || m.board_temp_c>temp.max);
+  const loud = m.ambient_noise_db != null && m.ambient_noise_db>noise.max;
+  const validity = row.failure_code==='E-204' && hot ? 'Die Ruhestromprüfung liegt außerhalb des gültigen Temperaturbereichs. Eine Grenzwertverletzung erlaubt hier keine belastbare Bauteilbewertung. Wiederholung unter gültigen Bedingungen erforderlich.' : row.failure_code==='E-310' && loud ? 'Der Umgebungslärm liegt über der Vorgabe für die Akustikprüfung. Die Prüfung muss unter gültigen Bedingungen wiederholt werden. Ein zusätzlicher Bauteildefekt ist damit nicht ausgeschlossen.' : hot ? 'Die Temperatur liegt außerhalb des Ruhestrom-Prüffensters. Das angezeigte Stationsurteil bleibt als Rohbefund erhalten; die Temperatur allein erklärt einen anderen Fehlercode nicht.' : 'Dieses Ergebnis ist das gespeicherte Stationsurteil. Eine einzelne Prüfung bestätigt keine Fehlerursache und ersetzt keine weitergehende Bauteilbewertung.';
+  $('testValidity').innerHTML = `<div class="test-warning">${esc(validity)}</div><p class="test-note">Prüfbedingungen: ${numberText(m.board_temp_c)} °C (Ruhestrom-Prüffenster ${temp.min}–${temp.max} °C) · ${numberText(m.ambient_noise_db)} dB(A) (Akustikvorgabe ≤ ${noise.max} dB(A)). <button class="chip" type="button" data-spec-section="4.2">Gültigkeit nachlesen</button></p>`;
+  const failureIndex = TEST_SEQUENCE.findIndex(test => test.code===row.failure_code);
+  $('testSteps').innerHTML = TEST_SEQUENCE.map((test,index) => {
+    const unknown = failed && failureIndex<0;
+    const notRun = failed && failureIndex>=0 && index>failureIndex;
+    const isFailure = failed && index===failureIndex;
+    let value = 'Nach dem ersten Fehler nicht mehr bewertet.';
+    if (unknown) value = 'Der gespeicherte Fehlercode lässt sich keinem Prüfschritt zuordnen.';
+    else if (!notRun) {
+      if (test.field==='lin_comm_ok') value = m.lin_comm_ok ? 'LIN-Antwort empfangen' : 'Keine LIN-Antwort';
+      if (test.field==='flash_time_s') value = `${numberText(m.flash_time_s)} s · maximal ${limits[row.variant].flash_max_s} s`;
+      if (test.field==='quiescent_current_ua') value = `${numberText(m.quiescent_current_ua)} µA · maximal ${limits[row.variant].quiescent_max_ua} µA`;
+      if (test.field==='operating_current_a') value = `${numberText(m.operating_current_a,2)} A · gültiger Bereich ${limits.operating_current_a.join('–')} A`;
+      if (test.field==='acoustic_score') value = `Score ${numberText(m.acoustic_score)} · mindestens ${limits.acoustic_min_score}`;
+    }
+    return `<li class="test-step ${notRun||unknown?'not-run':isFailure?'failed':''}"><span class="step-number">${index+1}</span><div><span class="step-name">${test.name}</span><span class="step-reading">${esc(value)}</span><button type="button" data-spec-section="${test.section}">Prüfvorgabe §${test.section}</button></div><span class="step-status">${unknown?'Unbekannt':notRun?'Nicht bewertet':isFailure?'FAIL · '+test.code:'PASS'}</span></li>`;
+  }).join('');
+  $('testSpec').open = false;
+  $('testSpecText').textContent = '';
+  $('testSource').textContent = `Quelle: Twin-Prüfergebnis ${row.id} · ${new Date(row.timestamp).toLocaleString('de-DE')} · Die geöffnete Prüfung bleibt unverändert, während neue Einheiten geprüft werden.`;
+  $('investigateTest').disabled = S.asking;
+  if (!$('testDialog').open) $('testDialog').showModal();
+}
+function showTestSpec(section) {
+  const reference = PRODUCTION_REFERENCE.sections[section]; if (!reference) return;
+  const spec = PRODUCTION_REFERENCE.spec;
+  $('testSpecTitle').textContent = `${spec.doc_id} Rev. ${spec.revision} §${section} · ${reference.title}`;
+  $('testSpecRevision').textContent = `Synthetische Prüfvorgabe · gültig ab ${spec.effective} · Referenzstand dieser Oberfläche`;
+  $('testSpecText').textContent = reference.text;
+  $('testSpec').open = true; $('testSpec').scrollIntoView({block:'nearest',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});
+}
+function prepareTestInvestigation() {
+  if (!P.inspected || S.asking) return;
+  const row = structuredClone(P.inspected);
+  $('testDialog').close();
+  changeGroup({station:row.station,variant:row.variant});
+  S.selectedProductionRow = row;
+  $('q').value = `Untersuche die Prüfung der Einheit ${row.serial} an Station ${row.station}, Variante ${row.variant}, Los ${row.lot}, Prüf-ID ${row.id}, Zeitpunkt ${row.timestamp}. Das gespeicherte Stationsurteil lautet ${row.verdict}${row.failure_code ? ' / '+row.failure_code : ''}. Prüfe mit deinen Werkzeugen den zugehörigen Linienzustand, die Prüfgültigkeit und mögliche gleichzeitige Ursachen. Falls du die konkrete Einheit nicht in deinen Werkzeugdaten findest, sage das ausdrücklich. Unterscheide Beobachtung, Hypothese und noch nötige Wiederholungsprüfung. Die Ursache wurde nicht bestätigt.`;
+  S.customQuestion = true; renderSelectedTestContext(); updateAskLabel();
+  $('investigation').scrollIntoView({block:'start',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});
+  $('askBtn').focus({preventScroll:true});
+}
+function renderSelectedTestContext() {
+  const area = $('selectedTestContext'), row = S.selectedProductionRow;
+  area.hidden = !row;
+  if (!row) { area.textContent = ''; return; }
+  area.innerHTML = `<b>Ausgangspunkt: konkrete Prüfung</b><p><span class="mono">${esc(row.serial)}</span> · Station ${row.station} / ${row.variant} · ${fmtSeconds(row.timestamp)}</p><p>Die Frage ist vorbereitet. Der Copilot muss den Einzelbezug über seine Werkzeugdaten prüfen.</p><button type="button" data-test-key="${esc(resultKey(row))}">Prüfung ansehen</button><button type="button" id="clearSelectedTest" ${S.asking?'disabled':''}>Auswahl lösen</button>`;
+}
+function resultForEvidence(evidence) {
+  if (evidence.source_type!=='live') return null;
+  const text = `${evidence.statement || ''} ${evidence.citation || ''} ${typeof evidence.ref?.value==='string' ? evidence.ref.value : ''} ${evidence.ref?.field || ''}`;
+  return [...(S.requestProductionRow?[S.requestProductionRow]:[]),...P.viewRows,...P.rows].find(row => text.includes(row.serial) && (evidence.ref?.station == null || String(row.station)===String(evidence.ref.station)) && (evidence.ref?.variant == null || row.variant===evidence.ref.variant));
+}
+function evidenceRowLink(evidence) {
+  const row = resultForEvidence(evidence);
+  return row ? `<button type="button" class="evidence-result-link" data-test-key="${esc(resultKey(row))}">Genannte Einheit ansehen ↗</button>` : '';
+}
+function renderDiagnosisStages(report) {
+  const area = $('diagnosisStages'), origin = $('hypothesisOrigin');
+  area.hidden = !report || report.finding==='information';
+  const supported = (report?.hypotheses || []).some(h=>h.support==='strong');
+  area.innerHTML = `<span class="${supported?'':'active'}">1 · Mögliche Ursache</span><span class="${supported?'active':''}">2 · ${supported?'Vom Copilot als evidenzgestützt bewertet':'Evidenzbewertung offen'}</span><span class="pending">3 · Wiederholungsprüfung ausstehend</span>`;
+  const row = S.requestProductionRow;
+  origin.hidden = !row;
+  origin.textContent = row ? `Ausgangspunkt: ${row.serial} · Station ${row.station} / ${row.variant} · ${fmtSeconds(row.timestamp)}. Eine konkrete Einheit wird nur verlinkt, wenn ihre Seriennummer im Beleg ausdrücklich genannt ist.` : '';
+}
+function initProductionInteractions() {
+  $('pauseProduction').addEventListener('click',()=>{P.paused=!P.paused;renderProduction();});
+  $('productionFilter').addEventListener('change',renderProductionList);
+  document.addEventListener('click', event=>{
+    const button=event.target.closest('button[data-test-key]'); if(button)showTest(button.dataset.testKey);
+  });
+  $('closeTestDialog').addEventListener('click',()=>$('testDialog').close());
+  $('testDialog').addEventListener('click',event=>{
+    const button=event.target.closest('button[data-spec-section]');if(button)showTestSpec(button.dataset.specSection);
+  });
+  $('investigateTest').addEventListener('click',prepareTestInvestigation);
+  $('selectedTestContext').addEventListener('click',event=>{
+    if(event.target.closest('#clearSelectedTest')&&!S.asking){S.selectedProductionRow=null;setDefaultQuestion();renderSelectedTestContext();}
+  });
+}
+
 async function getJSON(url, options) {
   const response = await fetch(url, options);
   if (!response.ok) {
@@ -333,7 +536,7 @@ async function getJSON(url, options) {
   return response.json();
 }
 async function init() {
-  renderStations(); renderGroupSel(); setDefaultQuestion();
+  renderStations(); renderGroupSel(); setDefaultQuestion(); initProductionInteractions();
   try { S.cfg = {...S.cfg, ...await getJSON('/config')}; }
   catch { $('cfg').textContent = 'Konfiguration nicht erreichbar; Standardadressen werden verwendet.'; }
   if (S.cfg.model) $('cfg').textContent = `${S.cfg.provider} · ${S.cfg.model}`;
@@ -362,9 +565,9 @@ async function init() {
     poll();
   }));
   document.querySelectorAll('.chip[data-q]').forEach(b => b.addEventListener('click', () => {
-    $('q').value = b.dataset.q; S.customQuestion = true; updateAskLabel(); $('q').focus();
+    S.selectedProductionRow = null; renderSelectedTestContext(); $('q').value = b.dataset.q; S.customQuestion = true; updateAskLabel(); $('q').focus();
   }));
-  $('q').addEventListener('input', () => { S.customQuestion = true; updateAskLabel(); });
+  $('q').addEventListener('input', () => { S.selectedProductionRow = null; renderSelectedTestContext(); S.customQuestion = true; updateAskLabel(); });
   $('q').addEventListener('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); ask(); } });
   document.querySelectorAll('.chip[data-f]').forEach(b => b.addEventListener('click', () => fault(JSON.parse(b.dataset.f))));
   $('clearFaults').addEventListener('click', clearFaults);
@@ -392,7 +595,7 @@ async function init() {
   new ResizeObserver(() => renderChart()).observe($('chart'));
   $('chart').addEventListener('mousemove', onCursor); $('chart').addEventListener('mouseleave', () => { S.cursor = null; renderCursor(); });
   document.querySelectorAll('.legend .win button').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.min === S.minutes)));
-  tick(); setInterval(tick, 1000); poll(); setInterval(poll, 4000); refreshOps(); setInterval(refreshOps, 12000);
+  startProduction(); tick(); setInterval(tick, 1000); poll(); setInterval(poll, 4000); refreshOps(); setInterval(refreshOps, 12000);
 }
 function tick() { $('clock').textContent = new Date().toLocaleString('de-DE', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'}); }
 function setDefaultQuestion() {
@@ -404,6 +607,7 @@ function updateAskLabel() {
   $('askBtn').textContent = S.customQuestion ? 'Frage untersuchen ↗' : S.last ? 'Erneut untersuchen ↗' : 'Untersuchung starten ↗';
 }
 function changeGroup(group) {
+  S.selectedProductionRow = null; renderSelectedTestContext();
   S.group = group; S.cursor = null; S.report = null; S.last = null; S.selComp = null; S.codeHot = null; S.series = null;
   $('resultContent').hidden = true; $('emptyState').hidden = false; $('emptyState').querySelector('b').textContent = 'Bereit für eine neue Untersuchung.';
   $('emptyState').querySelector('p').textContent = 'Die Ergebnisse beziehen sich immer auf die ausgewählte Station und Variante. Starten Sie die Untersuchung, um aktuelle Belege zu sammeln.';
@@ -428,17 +632,26 @@ function renderGroupSel() {
   $('selectionHint').textContent = `Variante ${S.group.variant} · Messdaten und Prüfvorgaben werden verglichen. Ein Bauteildefekt und ungültige Prüfbedingungen können gleichzeitig auftreten.`;
 }
 function renderStations(stale = false) {
+  const focused = document.activeElement?.closest('#stationCards button');
+  const focusStation = focused?.dataset.station, focusTest = focused?.dataset.testKey, focusCard = focused?.closest('.station-card')?.dataset.station;
   $('stationCards').innerHTML = [1,2,3].map(station => {
-    const groups = (S.stats?.groups || []).filter(g => g.station === station);
-    const tested = groups.reduce((sum,g) => sum + g.tested, 0);
-    const failed = groups.reduce((sum,g) => sum + g.failed, 0);
-    const rate = tested ? (100 * failed / tested).toFixed(1) : null;
-    const attention = groups.some(g => g.failure_rate_pct >= 5);
-    const selected = station === S.group.station;
-    const codes = [...new Set(groups.flatMap(g => Object.keys(g.failure_codes || {})))];
-    const state = stale ? 'Verbindung unterbrochen' : !tested ? 'Daten ausstehend' : attention ? 'Prüfbedarf' : 'Rate unter 5 %';
-    return `<button class="station-card ${selected ? 'selected' : ''} ${attention ? 'attention' : ''} ${stale || !tested ? 'unavailable' : ''}" data-station="${station}" aria-pressed="${selected}" ${S.asking ? 'disabled' : ''}><span class="station-top"><span>Station ${station}</span><span class="station-state"><i class="station-dot" aria-hidden="true"></i>${state}</span></span><span class="station-value">${rate === null ? '—' : rate.replace('.', ',') + ' %'}<small>Fehlerquote · 10 min${stale ? ' · letzter Stand' : ''}</small></span><span class="station-detail">${tested ? `${failed} von ${tested} Prüfungen fehlgeschlagen` : 'Noch keine aktuellen Messdaten'}</span><span class="station-bottom"><span>Variante ${station === 1 ? 'A' : station === 3 ? 'B' : 'A + B'}${codes.length ? ' · ' + esc(codes.slice(0,2).join(', ')) : ''}</span><b>${selected ? 'Ausgewählt' : 'Auswählen →'}</b></span></button>`;
+    const stats = P.paused ? P.viewStats : S.stats;
+    const groups = (stats?.groups || []).filter(g=>g.station===station);
+    const tested = groups.reduce((sum,g)=>sum+g.tested,0), failed = groups.reduce((sum,g)=>sum+g.failed,0);
+    const rate = tested ? numberText(100*failed/tested) : null;
+    const selected = station===S.group.station;
+    const row = P.viewRows.find(r=>r.station===station);
+    const lastFail = P.viewRows.find(r=>r.station===station && r.verdict==='fail');
+    const attention = groups.some(g=>g.failure_rate_pct>=5);
+    const offline = productionStale();
+    return `<article class="station-card ${selected?'selected':''} ${attention?'attention':''} ${offline?'unavailable':''}" data-station="${station}"><div class="station-top"><button type="button" class="station-select" data-station="${station}" aria-pressed="${selected}" ${S.asking?'disabled':''}>Station ${station}${selected?' · ausgewählt':''}</button><span class="station-state"><i class="station-dot" aria-hidden="true"></i>Variante ${station===1?'A':station===3?'B':'A + B'}</span></div>${row ? `<div class="station-observation"><div class="unit-heading"><span>Zuletzt abgeschlossene Prüfung</span><time datetime="${esc(row.timestamp)}">${fmtSeconds(row.timestamp)}</time></div><span class="unit-id">${esc(row.serial)}</span><span class="unit-meta">Variante ${row.variant} · Los ${esc(row.lot)}</span><div class="unit-result"><span class="verdict ${row.verdict==='fail'?'fail':''}">${row.verdict==='fail'?'FAIL':'PASS'}</span><strong>${row.verdict==='fail'?esc(row.failure_code||'Unbekannter Fehler'):'Bestanden'}</strong></div><div class="unit-measurement">${row.failure_code?esc(FAILURE_LABELS[row.failure_code]||row.failure_code)+'<br>':''}${esc(unitReading(row))}</div><button type="button" class="station-inspect" data-test-key="${esc(resultKey(row))}">Prüfung ansehen ↗</button>${lastFail && resultKey(lastFail)!==resultKey(row) ? `<button type="button" class="station-last-failure" data-test-key="${esc(resultKey(lastFail))}">Letzter Fehler: ${esc(lastFail.failure_code || 'FAIL')} · ${fmtSeconds(lastFail.timestamp)} ↗</button>` : ''}</div>` : '<div class="station-observation production-empty">Warte auf abgeschlossene Prüfungen.</div>'}<div class="station-bottom"><span>${rate!==null?`${rate} % Fehlerquote · ${failed}/${tested} · 10 min`:'Statistik wird geladen'}</span><span>${P.paused?'Ansicht pausiert':offline?'Letzter Stand':stale?'Statistik nicht aktuell':'Parallelbetrieb'}</span></div></article>`;
   }).join('');
+  // Keep keyboard focus when a live update replaces the station cards.
+  if (focusStation) [...document.querySelectorAll('#stationCards .station-select')].find(b=>b.dataset.station===focusStation)?.focus({preventScroll:true});
+  else if (focusTest) {
+    const buttons = [...document.querySelectorAll('#stationCards button[data-test-key]')];
+    (buttons.find(b=>b.dataset.testKey===focusTest) || buttons.find(b=>b.closest('.station-card')?.dataset.station===focusCard))?.focus({preventScroll:true});
+  }
 }
 async function poll() {
   const {station, variant} = S.group;
@@ -458,7 +671,7 @@ async function poll() {
     S.codeHot = S.report?.affected_components?.length ? null : dom;
     renderStations(); renderReadouts(g); renderChart(); renderTiles(g); renderSchematic(g);
     $('connectionStatus').textContent = 'Messdaten aktualisiert · ' + fmtT(stats.to_time);
-    getJSON(`${S.cfg.twin_url}/faults`).then(renderActive).catch(() => { $('active').textContent = 'Aktive Störungen konnten nicht geladen werden.'; });
+    getJSON(`${S.cfg.twin_url}/faults`).then(renderActive).catch(() => { $('active').textContent = 'Aktive Störungen konnten nicht geladen werden.'; P.faultFailed = true; renderProductionFaults(); });
   } catch (e) {
     if (version !== S.pollVersion) return;
     $('readouts').innerHTML = '<span class="hot">Keine aktuellen Messdaten</span>';
@@ -548,6 +761,7 @@ function selectComp(code) {
 
 function setAsking(busy) {
   S.asking = busy;
+  $('investigateTest').disabled = busy; renderSelectedTestContext();
   $('askBtn').disabled = busy; $('busy').hidden = !busy; $('q').disabled = busy;
   $('results').setAttribute('aria-busy', String(busy));
   document.querySelectorAll('[data-q], [data-f], #clearFaults').forEach(b => b.disabled = busy);
@@ -558,6 +772,7 @@ async function ask() {
   const q = $('q').value.trim();
   if (!q) { $('questionOptions').open = true; $('q').focus(); return; }
   S.last = null; S.report = null; S.requestQuestion = q;
+  S.requestProductionRow = S.selectedProductionRow ? structuredClone(S.selectedProductionRow) : null;
   S.requestLabel = S.customQuestion ? q : `Station ${S.group.station} · Variante ${S.group.variant} · Untersuchung angefragt um ${fmtT(new Date().toISOString())} Uhr`;
   setAsking(true); setFlow(2);
   $('resultContent').hidden = true; $('emptyState').hidden = false;
@@ -586,6 +801,7 @@ function answerExcerpt(answer) {
 const FINDING_TITLES = {pseudo_failure:'Prüfbedingungen außerhalb der Vorgabe', real_failure:'Hinweise auf einen Bauteilfehler', mixed:'Mehrere Ursachen müssen getrennt geprüft werden', unclear:'Die Ursache ist noch offen', information:'Ihre Frage im Überblick'};
 function renderFinding(r) {
   const rep = r.report;
+  renderDiagnosisStages(rep);
   $('emptyState').hidden = true; $('resultContent').hidden = false;
   $('finding').dataset.state = r.error ? 'error' : rep?.finding || 'information';
   $('investigationQuestion').textContent = S.requestLabel || S.requestQuestion || '';
@@ -627,7 +843,7 @@ function renderInvestigation(r) {
   const hyps = rep.hypotheses.length ? rep.hypotheses.map((h,i) => `<div class="hyp ${h.support}"><span class="n">H${i+1}</span><span><b style="font-weight:500">${esc(h.title)}</b><div class="r">${esc(h.rationale)}</div>${h.test ? `<div class="r" style="margin-top:4px"><b style="font-weight:500">Trenntest:</b> ${esc(h.test.title)} — wenn zutreffend: ${esc(h.test.prediction_if_true)}; sonst: ${esc(h.test.prediction_if_false)}</div>` : ''}</span><span class="sup ${h.support}">${SUP[h.support] || esc(h.support)}</span></div>`).join('') : '<div class="empty">keine Hypothesen – Informationsfrage</div>';
   $('hyps').innerHTML = (assess ? `<div class="label" style="margin-bottom:6px">Bewertung je Gruppe</div>${assess}<div class="label" style="margin:10px 0 6px">Hypothesen</div>` : '') + hyps;
   const vitems = (r.verification && r.verification.items) || [];
-  $('ev').innerHTML = rep.evidence.length ? rep.evidence.map((e,i) => { const v = vitems[i] || {}; const p = PROV[v.provenance] || ['–','nicht geprüft']; const s = SUPP[v.support] || ['–','nicht geprüft']; const bad = v.provenance && v.provenance!=='verified' && v.provenance!=='not_checked'; return `<tr data-src="${e.source_type}" style="${bad?'color:#b4400f':''}"><td class="n">${i+1}</td><td><span class="src ${e.source_type}">${e.source_type==='live'?'LIVE':'DOK'}</span>${esc(e.statement)}${e.supports ? `<div class="muted" style="font-size:11.5px">stützt: ${esc(e.supports)}</div>` : ''}${v.detail ? `<div class="muted" style="font-size:11px" title="${esc(v.detail)}">${esc(v.detail.slice(0,110))}</div>` : ''}</td><td class="c cite">${esc(e.citation)}<div class="mono" style="font-size:11px;color:${bad?'#b4400f':'var(--muted)'}" title="${esc(p[1])} · ${esc(s[1])}">${p[0]} Herkunft · ${s[0]} Stützung</div></td></tr>`; }).join('') : '<tr><td class="empty">—</td></tr>';
+  $('ev').innerHTML = rep.evidence.length ? rep.evidence.map((e,i) => { const v = vitems[i] || {}; const p = PROV[v.provenance] || ['–','nicht geprüft']; const s = SUPP[v.support] || ['–','nicht geprüft']; const bad = v.provenance && v.provenance!=='verified' && v.provenance!=='not_checked'; return `<tr data-src="${e.source_type}" style="${bad?'color:#b4400f':''}"><td class="n">${i+1}</td><td><span class="src ${e.source_type}">${e.source_type==='live'?'LIVE':'DOK'}</span>${esc(e.statement)}${evidenceRowLink(e)}${e.supports ? `<div class="muted" style="font-size:11.5px">stützt: ${esc(e.supports)}</div>` : ''}${v.detail ? `<div class="muted" style="font-size:11px" title="${esc(v.detail)}">${esc(v.detail.slice(0,110))}</div>` : ''}</td><td class="c cite">${esc(e.citation)}<div class="mono" style="font-size:11px;color:${bad?'#b4400f':'var(--muted)'}" title="${esc(p[1])} · ${esc(s[1])}">${p[0]} Herkunft · ${s[0]} Stützung</div></td></tr>`; }).join('') : '<tr><td class="empty">—</td></tr>';
   const nt = rep.next_test;
   $('next').innerHTML = nt ? `<b>${esc(nt.title)}</b><span class="meta">Erwartung: ${esc(nt.expectation)} · Dauer: ${esc(nt.duration)} · ${nt.block_units ? '<span class="flag">Sperrung wird empfohlen</span>' : 'Keine Sperrung vorgeschlagen; dies ist keine Bauteilfreigabe'}</span>` : '<span class="empty">kein Test vorgeschlagen</span>';
   document.querySelectorAll('#decide button').forEach(b => b.disabled = !nt || !!r.error || !r.investigation_id);
@@ -665,6 +881,7 @@ async function changeFaults(options) {
 async function fault(f) { await changeFaults({method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify(f)}); }
 async function clearFaults() { await changeFaults({method:'DELETE'}); }
 function renderActive(faults) {
+  P.faultKnown = true; P.faultFailed = false; P.lastFaultAt = Date.now(); P.faults = faults; renderProductionFaults();
   const names = {temperature_drift:'Temperaturdrift', acoustic_noise:'Umgebungslärm', bad_lot:'Fehlerhaftes Los', sensor_offset:'Sensorabweichung', firmware_change:'Firmwarewechsel', fixture_fault:'Fehler der Lastaufnahme'};
   $('active').innerHTML = faults.length ? 'Aktive Störungen:' + faults.map(a => `<span>${esc(names[a.fault.type] || a.fault.type)} · ${a.fault.station ? 'Station ' + esc(a.fault.station) : 'Los ' + esc(a.fault.lot)} · seit ${fmtT(a.started_at)}</span>`).join('') : 'Keine simulierte Störung aktiv.';
 }
