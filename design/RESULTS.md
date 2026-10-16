@@ -37,3 +37,13 @@ Je Szenario (Befund korrekt / Bewertungen korrekt, über Wiederholungen):
 | S08-drift-and-bad-lot | 0/3 · 0/3 | 3/3 · 2/3 |
 
 > **Anmerkung zu diesem Lauf (V1/V2, Limit 24 000):** Noch *ohne* eingefrorenen Datenstand und ohne Twin-Reset – die Systeme liefen nacheinander auf dem lebenden Twin, und die E-120-Fehler des vorigen S08-Laufs (Lauf 1) lagen noch im 30-Minuten-Fenster (Lösbarkeitsprüfung: 144 Los-Fehler statt ~20). Das erklärt vermutlich den einen „mixed"-Befund von V2 auf S01. Beantwortet ist: Die V2-Abbrüche in Lauf 1 waren das Token-Limit. Der nächste Lauf verwendet Schnappschuss + Reset je Szenario und alle fünf Systeme.
+
+> **Nachträgliche Auswertung von Lauf 2 (`evals/rescore.py`, ohne Modellaufrufe):** Zusatzbehauptungen zählen.
+
+| System | Bewertungen gefunden | Zusatz-Behaupt. Ø | Läufe mit Zusatzbehauptung | Bewertungen exakt | Befund korrekt |
+|---|---|---|---|---|---|
+| V1 | 0 % | 0.00 | 0/6 | 0 % | 50 % |
+| V2 | 83 % | 0.17 | 1/6 | 67 % | 83 % |
+
+Zusatzbehauptungen im Detail:
+- v2/S01-temperature-drift/r0: {'station': 2, 'variant': 'B', 'lot': None} valid/suspected/unknown
