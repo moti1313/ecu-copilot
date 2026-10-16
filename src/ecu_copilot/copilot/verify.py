@@ -172,7 +172,9 @@ def verify_doc(ref: dict, citation: str, chunks: list) -> tuple[str, str, str | 
     doc_chunks = [c for c in chunks if c.doc_id.upper() == str(doc_id).upper()]
     if not doc_chunks:
         return "not_found", f"document {doc_id} not in index", None
-    sec = str(section).rstrip(".") if section else None
+    # normalise what models write: "§4.2", "section 4.2", "item 7", "Rev. D"
+    sec = re.sub(r"^\s*(§|item|section|abschnitt|sec\.?)\s*", "", str(section), flags=re.I).strip().rstrip(".") if section else None
+    revision = re.sub(r"^\s*rev(ision)?\.?\s*", "", str(revision), flags=re.I).strip() if revision else None
     hit = None
     if sec:
         hit = next((c for c in doc_chunks if c.section == sec or c.section.split(" ")[0].rstrip(".") == sec), None)

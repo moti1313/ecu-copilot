@@ -1,0 +1,24 @@
+{
+  "id": "S08-drift-and-bad-lot",
+  "title": "Zwei Ursachen gleichzeitig: Temperaturdrift an Station 2 und schlechtes Steckverbinder-Los",
+  "question": "An Station 2 steigt die Ausfallrate bei Variante B. Was ist los? Gibt es mehr als eine Ursache?",
+  "setup": [
+    {"type": "temperature_drift", "station": 2, "delta_c": 10, "ramp_s": 0},
+    {"type": "bad_lot", "variant": "B", "lot": "L2439-07", "fail_rate": 0.25}
+  ],
+  "settle_s": 150,
+  "truth": {
+    "assessments": [
+      {"scope": {"station": 2, "variant": "B"}, "test_validity": "invalid_temperature", "defect_indication": "none_assessable", "root_cause": "station_temperature"},
+      {"scope": {"lot": "L2439-07"}, "test_validity": "valid", "defect_indication": "strong", "root_cause": "connector_lot"}
+    ],
+    "finding": "mixed",
+    "components_any": ["J3"],
+    "required_tools": ["check_validity", "cluster_failures"],
+    "must_cite_any": ["TS-DCU-EOL §4.2", "FMEA-DCU-B2"],
+    "next_test_keywords_any": ["Los", "lot", "L2439-07", "Re-Test", "re-test", "Wiederhol"],
+    "block_units": null,
+    "abstain_expected": false
+  },
+  "solvability": {"check": "validity_and_lot", "station": 2, "variant": "B", "code": "E-204", "min_invalid_share_pct": 80, "min_failures": 8, "lot": "L2439-07", "lot_code": "E-120", "min_lot_failures": 8}
+}

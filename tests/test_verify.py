@@ -178,3 +178,19 @@ def test_v2_report_parsing_and_derived_finding():
     assert derive_finding({"assessments": []}) == "information"
     assert derive_finding({"assessments": [{"test_validity": "valid", "defect_indication": "none", "root_cause": "none"}]}) == "unclear"
     assert parse_report(json.dumps({"answer_markdown": "a", "finding": "pseudo_failure"}))["finding"] == "pseudo_failure"
+
+
+def test_doc_citation_normalisation(bm25_index):
+    report = {
+        "evidence": [
+            _ev("valid 18 to 32 °C", "document", {"doc_id": "TS-DCU-EOL", "revision": "Rev. D", "section": "§4.2"}, "TS-DCU-EOL §4.2"),
+            _ev(
+                "lot dependent E-120 cluster connector J3",
+                "document",
+                {"doc_id": "FMEA-DCU-B2", "revision": None, "section": "section 3"},
+                "",
+            ),
+        ]
+    }
+    v = verify_report(report, [], bm25_index._chunks, load_spec())
+    assert [i.provenance for i in v.items] == ["verified", "verified"]

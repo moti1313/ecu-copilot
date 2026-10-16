@@ -68,6 +68,8 @@ How to work
 {_RULES_COMMON}
 9. Every live evidence item must carry a ref: the tool call number (1 = first call of this run), the exact field in that call's output (e.g. "codes.E-204.invalid_per_spec", "groups[station=2,variant=B].failure_rate_pct", "top.rate_ratio"), the station/variant/window it refers to, and the value. A value from station 1 is no evidence about station 2. Every document evidence item must carry doc_id, revision if known, and the section number.
 10. Propose a next test that DISCRIMINATES between your hypotheses (its result must come out differently if H1 is true vs H2), and say what you expect in each case.
+11. One evidence item = one field = one value. Never pack several fields into one ref (no "{{a, b, c}}"); make separate items. Write the section as a plain number ("4.2", not "§4.2") and the revision as a plain letter ("D").
+12. If check_validity, detect_change, cluster_failures or describe_signal return an error, do NOT replace them with your own calculation from stats or raw rows: set test_validity to "unknown", say which check could not be run, and recommend re-running it. A conclusion without the engineering checks is not allowed.
 
 Output format
 Your final message is a JSON object (the schema is enforced). Fields:
