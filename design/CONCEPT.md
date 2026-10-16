@@ -52,7 +52,9 @@ Jedes Szenario: Störung(en) im Twin + Frage + **Wahrheit** (Befundtyp, Ursache,
 | S11–S15 | Informationsfragen (Limits, Abkündigung, 8D-Inhalt, Nicht-existenter Grenzwert, Off-Topic) | wie V1-Golden-Set | Grundfunktion |
 | S16–S20 | Varianten von S01–S03 mit anderen Stationen/Stärken, 2 Wiederholungen je Szenario | Konsistenz | Varianz messen |
 
-Ziel: 20 Szenarien, je 3 Läufe → 60 Läufe pro System, ca. 3–5 $ pro vollständigem Vergleich (gpt-5) – oder weniger mit kleinerem Modell.
+Umfang: **Phase 1 = 12 Szenarien** (S01–S05, S08, S11–S15, S04), **Endausbau = 20** (plus S06, S07, S09, S10, S16–S20). Je 3 Läufe → 36 bzw. 60 Läufe pro System; ca. 2–5 $ pro vollständigem Vergleich mit gpt-5, weniger mit gpt-5-mini.
+
+**Unklare Fälle bleiben drin:** S04 (kein Fehler), S05 (Sensor) und S09 (schwaches Signal) haben die Wahrheit „unklar/kein Befund". Richtiges **Zurückhalten** einer Diagnose wird als Treffer gewertet; eine selbstbewusste Falschdiagnose zählt doppelt negativ (Befund falsch *und* nicht zurückgehalten).
 
 ## 5. Baselines und Metriken
 
@@ -65,16 +67,18 @@ Ziel: 20 Szenarien, je 3 Läufe → 60 Läufe pro System, ca. 3–5 $ pro vollst
 **Metriken je Lauf**
 | Metrik | Definition |
 |---|---|
-| Befund-Genauigkeit | `finding` = Wahrheit (pseudo/echt/unklar/information) |
-| Ursachen-Genauigkeit | Komponente/Los/Ursache in `affected_components` bzw. Hypothese 1 |
+| Befund-Genauigkeit | je `assessment`: `test_validity` und `defect_indication` = Wahrheit für die betroffene Gruppe; bei Mehrfachfehlern müssen **beide** Gruppen stimmen |
+| Ursachen-Genauigkeit | `root_cause` aus dem kontrollierten Vokabular = Wahrheit |
+| Zurückhaltung | bei Wahrheit „unklar": Agent sagt unklar (Treffer) statt zu raten |
 | Test-Korrektheit | vorgeschlagener Test entspricht dem richtigen (Judge mit Rubrik) und ist **unterscheidend** |
-| Zitat-Validität | Anteil Dokument-Zitate, die existieren (Dokument + Abschnitt + aktuelle Revision) |
-| Beleg-Verifikation | Anteil Live-Belege, deren Zahlen in Werkzeugausgaben vorkommen |
+| Zitat-Validität | Anteil Dokument-Zitate mit existierendem Dokument + Abschnitt + aktueller Revision |
+| Herkunfts-Rate | Anteil Live-Belege, deren `ref` (Aufruf, Feld, Station, Variante, Fenster, Wert) in den Werkzeugausgaben dieses Laufs stimmt |
+| Stützungs-Rate | Anteil Belege, bei denen die Behauptung zum referenzierten Wert/Abschnitt passt (deterministisch, wo möglich; sonst „nicht geprüft") |
 | Explorations-Vollständigkeit | Pflicht-Werkzeuge des Szenarios aufgerufen |
 | Konsistenz | Anteil gleicher Befunde über 3 Läufe |
 | Latenz, Kosten | Sekunden, USD |
 
-**Erwartung (ehrlich):** B0 wird S01–S03 lösen und bei S04–S10 versagen (kennt die Fälle nicht). B1 wird plausibel klingen und bei Zitat-Validität und Mehrfachursachen einbrechen. V2 soll V1 bei Beleg-Verifikation, Konsistenz und S05/S08/S10 schlagen – wenn nicht, sagen wir das.
+**Erwartung (ehrlich):** B0 bekommt dieselben Werkzeuge wie V2 und Regeln für alle bekannten Muster (Temperatur, Lärm, Los-Lift, Sensor-Entkopplung, Firmware, Fixture). Es wird S01–S03, S05–S07 vermutlich lösen und bei Informationsfragen, Mehrfachursachen mit Interaktion und Fragen außerhalb seines Regelsatzes versagen. B1 wird plausibel klingen und bei Zitat-Validität und Herkunft einbrechen. V2 muss sich gegen **dieses** B0 beweisen – schlägt es B0 nur dort, wo B0 keine Regel hat, ist das ein ehrliches und nützliches Ergebnis („Regeln für bekannte Muster, Agent für den Rest").
 
 ## 6. Nicht-Ziele (bewusst)
 - Kein Multi-Agent-System, solange Evals es nicht verlangen.
@@ -88,9 +92,9 @@ Ziel: 20 Szenarien, je 3 Läufe → 60 Läufe pro System, ca. 3–5 $ pro vollst
 | Phase | Inhalt | Abnahme („fertig, wenn") | Aufwand |
 |---|---|---|---|
 | **0 – Korrekturen aus dem Review (16.10.)** | (a) UI sagt nur, was das Backend tut: „Entscheidung protokolliert", nicht „Sperrung veranlasst"; HTTP-Status prüfen. (b) Eval-Gate: übersprungene Live-Fälle zählen als nicht bestanden. (c) Simulator: Lese-Snapshots unter Lock. (d) Freigaben an eine serverseitig gespeicherte Untersuchung (`investigation_id`) binden. (e) Prompt-Regel: **„ungültige Prüfung ≠ fehlerfreies Bauteil"** – Befund „Pseudo-Fehler" heißt „keine belastbare Bauteilbewertung möglich, Wiederholung unter gültigen Bedingungen", nie „Bauteil in Ordnung". | Tests für (b), (c), (d); S08 (gleichzeitige Fehler) im Golden-Set | ½ Tag |
-| **1 – Evidenz & Messung** | maschinenlesbare Spezifikation; Werkzeuge `check_validity`, `detect_change`, `cluster_failures`, `describe_signal`; Belegprüfung; Szenario-Bank (12 Szenarien); Harness mit Wiederholungen; Baselines B0/B1 | Eine Tabelle V1 vs. V2 vs. B0 vs. B1 über 12 Szenarien × 3 Läufe, alle Metriken aus §5; Beleg-Verifikation im UI sichtbar | 2–3 Tage |
-| **2 – Hypothesentest** | `simulate_retest` im Twin; `POST /retest` (echter Re-Test im Twin nach Freigabe); Ergebnis gegen Vorhersage; Protokoll; UI-Integration | S01 Ende-zu-Ende: Vorhersage → Freigabe → Re-Test → „gestützt", mit Trace; Szenario S05 unterscheidet Sensorfehler | 2 Tage |
-| **3 – Versionen & Robustheit** | Dokument-Revisionen im RAG; Szenarien S06, S10; Latenz-Analyse aus Jaeger, Effort/Modell-Vergleich | S10 besteht; Latenz-Tabelle (Modell × Effort) | 1–2 Tage |
+| **1 – Evidenz & Messung** | maschinenlesbare Spezifikation **mit Revision und Status** (Minimalversionierung, damit die Herkunftsprüfung „aktuelle Revision" prüfen kann); Werkzeuge `check_validity`, `detect_change`, `cluster_failures` (mit Lift), `describe_signal`; Report-Schema V2 (`assessments`, strukturierte `ref`); Belegprüfung (Herkunft + Stützung); Szenario-Bank (12 Szenarien inkl. S08); Harness mit Wiederholungen; Baselines B0 (fair) / B1. **Erster Durchstich: S01 und S08 vollständig.** | Eine Tabelle V1 vs. V2 vs. B0 vs. B1 über 12 Szenarien × 3 Läufe, alle Metriken aus §5; Herkunft/Stützung je Beleg im UI sichtbar | 3 Tage |
+| **2 – Hypothesentest** | Twin mit **persistentem Einheit-Zustand** (Serial → latenter Defekt, individueller Offset); `simulate_retest` (Modellpfad) und `POST /retest` (Messpfad, dieselben Einheiten) als getrennte Wege; Ergebnis gegen Vorhersage; Protokoll; UI-Integration | S01 Ende-zu-Ende: Vorhersage → Freigabe → Re-Test → „gestützt"; **S08: Re-Test nach Abkühlung lässt die Los-Einheiten weiterhin durchfallen** (Defekt persistiert); Szenario S05 unterscheidet Sensorfehler | 2 Tage |
+| **3 – Versionen & Robustheit** | vollständige Dokument-Revisionen im RAG (superseded-Dokumente im Index, Filter); Szenarien S06, S07, S09, S10, S16–S20; Latenz-Analyse aus Jaeger, Effort/Modell-Vergleich | S10 besteht; Benchmark auf 20 Szenarien; Latenz-Tabelle (Modell × Effort) | 1–2 Tage |
 | **4 – Demo-Fluss** | Leitstand-Sicht (B) und Akte (C) als Einstieg/Ausstieg; Drehbuch | 5-Minuten-Demo läuft zweimal ohne Eingriff | 1–2 Tage |
 
 Reihenfolge ist fix: **erst messen (1), dann testen (2), dann schön (4).**

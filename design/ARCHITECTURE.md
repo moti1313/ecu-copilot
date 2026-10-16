@@ -68,7 +68,12 @@ Alle Funktionen sind reine Python-Funktionen auf Twin-Daten + Spezifikation, **u
 | `detect_change(station, variant, metric, minutes)` | Metrik (failure_rate, quiescent, temp, noise) | Onset-Zeitpunkt, Niveau vorher/nachher, Effektgröße (z), „signifikant: ja/nein" – CUSUM oder Zwei-Fenster-Test | CausalPulse Anomalieerkennung; Agent-Pitfall „falsches Zeitfenster" |
 | `cluster_failures(station, variant, minutes, by)` | by = lot \| code \| firmware \| hour | Verteilung + Konzentrationsmaß (z. B. Anteil des größten Clusters, Erwartung bei Gleichverteilung) | FMEA Item 7; Pitfall „Symptom als Ursache" |
 | `describe_signal(station, variant, minutes)` | Fenster | Text-Deskriptoren: Mittel/Min/Max/Trend je Messgröße, **Korrelation Iq↔T1**, Flags („T1 außerhalb seit 21:38", „Iq folgt T1 nicht") | Sensor-Level-Paper: Deskriptoren statt Rohdaten |
-| `simulate_retest(serials, conditions)` | Serials + Zielbedingungen (z. B. board_temp_c=25) | vorhergesagtes Ergebnis je Einheit aus dem Leckstrommodell, klar markiert `simulation: true`, mit Modellannahmen | Prozessanlagen-Paper: Twin-Validierung vor Maßnahme |
+| `simulate_retest(serials, conditions)` | Serials + Zielbedingungen (z. B. board_temp_c=25) | vorhergesagtes Ergebnis je Einheit aus dem **Modell** (Leckstromkennlinie, typische Streuung), klar markiert `simulation: true`, mit Annahmen | Prozessanlagen-Paper: Twin-Validierung vor Maßnahme |
+
+**Simulation vs. Wiederholungsprüfung – bewusst zwei Pfade, damit sie sich nicht gegenseitig bestätigen:**
+- `simulate_retest` rechnet mit der *Modellannahme* (Kennlinie, Streuung) und kennt **keine** Einheit-Zustände.
+- `POST /retest` misst im Twin dieselben **Einheiten mit ihrem persistenten Zustand** erneut: Der Twin führt je Serial einen latenten Zustand (z. B. `lin_defect: true` für Einheiten aus dem schlechten Los, individueller Ruhestrom-Offset) und misst unter den *aktuellen* Stationsbedingungen. Ein defektes Gerät fällt also auch nach Abkühlung durch; ein neu gewürfeltes Gerät wäre kein Re-Test.
+- Beide bleiben Ergebnisse eines Modells (der Twin ist einer). Das UI sagt es: „Simulation (Modell)" vs. „Wiederholungsprüfung (Twin-Messung)". Was „Bestätigung" im echten Werk bedeutet, steht in den Production Notes.
 | `search_docs`, `lookup_part`, `draft_8d_report` | wie V1 | + Revision in Zitaten | – |
 
 `get_station_stats` bleibt; `get_recent_results` wird auf max. 40 Ergebnisse begrenzt und liefert die Zusammenfassung zuerst.
@@ -76,22 +81,47 @@ Alle Funktionen sind reine Python-Funktionen auf Twin-Daten + Spezifikation, **u
 ## 4. Schicht 3 – Agent und Verifikation
 
 ### 4.1 Agent
-Unverändert ein Agent (Anthropic Tool Runner / OpenAI-Loop), Report-Schema wie V1 plus:
-- `hypotheses[].test`: `{title, discriminates: ["H1","H2"], prediction_if_true, prediction_if_false}` – der Test muss sagen, welche Hypothesen er trennt (CoffeeBench).
-- `evidence[].values`: die Zahlen des Belegs als Liste (für die Prüfung).
-- `routing`: `["live","docs"]` – welche Pfade der Agent für die Frage gewählt hat (Router-Idee aus dem Lager-Paper; macht die Entscheidung messbar).
+Unverändert ein Agent (Anthropic Tool Runner / OpenAI-Loop). Report-Schema V2 (ersetzt das einzelne `finding`, das Mehrfachfehler nicht ausdrücken konnte):
 
-Prompt-Regeln neu: „Benutze `check_validity`, bevor du über Gültigkeit sprichst. Benutze `detect_change`, bevor du ‚seit X Minuten' sagst. Rechne nicht selbst."
+```json
+{
+ "answer_markdown": "…",
+ "assessments": [                                  // eine Bewertung je betroffener Gruppe
+   {"scope": {"station": 2, "variant": "B", "lot": null},
+    "test_validity": "invalid_temperature",        // valid | invalid_temperature | invalid_noise | invalid_fixture | unknown
+    "defect_indication": "none_assessable",        // none_assessable (Prüfung ungültig) | none | suspected | strong
+    "root_cause": "station_temperature"}           // kontrolliertes Vokabular: station_temperature, cell_noise, fixture,
+ ],                                                //   sensor_t1, firmware, connector_lot, component_u1/u7/u12, unknown, none
+ "hypotheses": [{"title": "…", "support": "strong|moderate|weak|rejected", "rationale": "…",
+                 "test": {"title": "…", "discriminates": ["H1","H2"], "prediction_if_true": "…", "prediction_if_false": "…"}}],
+ "evidence": [
+   {"statement": "…", "source_type": "live",
+    "ref": {"tool_call": 3, "field": "groups[station=2,variant=B].failure_rate_pct", "window_minutes": 10, "value": 13.4},
+    "supports": "H1"},
+   {"statement": "…", "source_type": "document",
+    "ref": {"doc_id": "TS-DCU-EOL", "revision": "D", "section": "4.2"}, "supports": "H1"}
+ ],
+ "next_test": {"title": "…", "expectation": "…", "duration": "…", "units": ["DCUB-…"], "block_units": false} | null,
+ "affected_components": ["T1","U1"],
+ "routing": ["live","docs"]
+}
+```
+Regeln: **„Prüfung ungültig" ist keine Aussage über das Bauteil** – `defect_indication: none_assessable` heißt „nicht bewertbar, Wiederholung unter gültigen Bedingungen", nie „in Ordnung". Gleichzeitige Befunde (S08) sind zwei `assessments` (z. B. `invalid_temperature` für Station 2/B und `valid` + `strong` + `connector_lot` für Los L2439-07). Ein Test muss sagen, welche Hypothesen er trennt (CoffeeBench).
+
+Prompt-Regeln neu: „Benutze `check_validity`, bevor du über Gültigkeit sprichst. Benutze `detect_change`, bevor du ‚seit X Minuten' sagst. Jeder Live-Beleg nennt Werkzeugaufruf, Feld, Station, Variante und Fenster. Rechne nicht selbst."
 
 ### 4.2 Verifikationsmodul (`copilot/verify.py`)
-Läuft nach dem Modell, vor der Antwort. Kein LLM.
-- **Live-Belege:** jede Zahl in `values` muss in einer Werkzeugausgabe desselben Laufs vorkommen (Toleranz 1 % oder Rundung). Ergebnis je Beleg: `verified` / `not_found`.
-- **Dokument-Belege:** Zitat parsen (doc_id, revision, section) → existiert der Chunk? Ist die Revision `current`? → `verified` / `unknown_section` / `superseded`.
-- **Report-Ebene:** `verification: {live_verified: n/m, docs_verified: n/m, flags: [...]}`. Bei `live_verified < 100 %` erscheint eine Warnung im UI; bei erfundenem Zitat wird der Beleg rot.
-- Metrik fließt in Evals ein (Beleg-Verifikation, Zitat-Validität).
+Läuft nach dem Modell, vor der Antwort. Kein LLM. Zwei getrennte Prüfungen mit getrennten Namen – **Herkunft** und **Stützung**:
+
+| Prüfung | Live-Beleg | Dokument-Beleg |
+|---|---|---|
+| **Herkunft verifiziert** (`provenance`) | `ref` zeigt auf einen Werkzeugaufruf dieses Laufs; das Feld existiert in dessen Ausgabe **für genau Station/Variante/Fenster**; der Wert stimmt (Toleranz 1 % / Rundung). 32 °C an Station 1 belegt nichts über Station 2. | `doc_id`/`revision`/`section` existieren im Index; Revision ist `current` (sonst `superseded`). |
+| **Stützung geprüft** (`support`) | Die Behauptung passt zur Richtung des Werts (z. B. „über Limit" ⇔ Wert > Limit aus Spezifikation) – nur für die Typen, die wir deterministisch prüfen können; sonst `not_checked`. | Der zitierte Abschnitt enthält die Schlüsselbegriffe der Behauptung (Zahlen, Codes, Fachwörter) oder hat hohe Ähnlichkeit; Ergebnis `supported` / `weak` / `not_checked`. Das ist eine Heuristik und wird so benannt. |
+
+Report-Ebene: `verification: {provenance: {live: n/m, docs: n/m}, support: {live: n/m, docs: n/m}, flags: [...]}`. Im UI je Beleg zwei Marken (Herkunft ✓/✗, Stützung ✓/~/–). Ein Beleg ohne verifizierte Herkunft wird rot und zählt im Benchmark als fehlerhaft. Metriken: Herkunfts-Rate, Stützungs-Rate, Zitat-Validität.
 
 ### 4.3 Baselines (`evals/baselines.py`)
-- **B0:** ruft Schicht 2 direkt, Entscheidungsbaum: `check_validity` → wenn INVALID-Anteil > 50 % → Pseudo; sonst `cluster_failures(by=lot)` → Konzentration > 0,5 → Echt/Los; sonst unklar. Kein LLM.
+- **B0 – faires Regelwerk:** darf **alle** Werkzeuge der Schicht 2 nutzen, dieselben wie V2. Entscheidungsregeln je Gruppe: `check_validity` → INVALID-Anteil > 50 % ⇒ `test_validity` entsprechend; `describe_signal` → „Iq folgt T1 nicht" ⇒ `sensor_t1`; `cluster_failures(by=firmware)` → Fehler nur in einer Firmware-Version ⇒ `firmware`; `cluster_failures(by=lot)` → **Lift** (Fehleranteil des Loses ÷ Prüfanteil des Loses) > 2 und n ≥ 10 ⇒ `connector_lot`; E-205 über alle Varianten einer Station ⇒ `fixture`; sonst `unknown`. Kein LLM. Der Lift ist Pflicht – 70 % der Fehler aus einem Los sagen nichts, wenn das Los 90 % der Teile stellt.
 - **B1:** ein Aufruf: Statistik 10/60 min + Top-5-Chunks + Frage → Report-Schema. Keine Tools.
 - **B2 (optional, bei Zugang):** TypeSafe-AI **Jev** (System-One-Modell, typisierte Entscheidungen mit kalibrierter Wahrscheinlichkeit): Zustand = Deskriptoren aus `describe_signal` + `check_validity`, Frage = *Choice* {pseudo_failure, real_failure, unclear}. Misst, ob ein Klassifikator mit Wahrscheinlichkeit für die Triage reicht – und ob seine Kalibrierung auf unseren Szenarien stimmt.
 
@@ -123,7 +153,7 @@ Zwei Aufgaben vor dem Agenten, hinter einem Schalter `ROUTER=none|llm|jev`:
 | A6 | Benchmark mit Wahrheit, Lösbarkeitsfilter, Wiederholungen, Baselines | TraceBench, CoffeeBench, Westermo |
 | A7 | Spezifikation maschinenlesbar neben Markdown, aus Markdown generiert | AAS-Idee im Kleinen; Konsistenz testbar |
 | A8 | Provider-Abstraktion bleibt; Modellwahl ist Benchmark-Ergebnis | TraceBench: Modelle unterscheiden sich stark in Kosten/Genauigkeit |
-| A9 | System-One-Modell (Jev) nur für Routing/Triage, hinter Schalter, als Ergänzung | Lagerdiagnose-Paper (Router); Westermo (Confidence-Problem); Anbieterrisiko → optional |
+| A9 | System-One-Modell (Jev) nur für Routing/Triage, hinter Schalter, als Ergänzung | Westermo (Confidence-Problem); Anbieterrisiko → optional. Die Router-Idee ist zusätzlich im Lagerdiagnose-Paper beschrieben (nur Abstract gelesen) – die Entscheidung hängt nicht von dessen Zahlen ab. |
 
 ## 8. Dateiplan (neu / geändert)
 
