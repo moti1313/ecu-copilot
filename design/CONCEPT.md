@@ -58,7 +58,10 @@ Umfang: **Phase 1 = 12 Szenarien** (S01–S05, S08, S11–S15, S04), **Endausbau
 
 ## 5. Baselines und Metriken
 
+**Methodik (korrigiert nach Review von Lauf 1, 16.10.):** Je Szenario wird nach der Wartezeit **ein Schnappschuss** des Twins genommen (feste Bezugszeit); alle Systeme und Wiederholungen laufen auf denselben Daten. Drei Quoten werden getrennt ausgewiesen: **Abschluss** (auswertbarer Report ohne Fehler), **Diagnose-Konsistenz** (Mehrheitsanteil nur über abgeschlossene Läufe – abgebrochene Antworten zählen nie als Übereinstimmung) und **Korrektheit** (gegen die Wahrheit). Fehlgeschlagene Läufe bleiben in `RESULTS.md` als fehlgeschlagen unter ihrer Konfiguration stehen.
+
 **Systeme im Vergleich**
+- **V1S – V1-Werkzeuge mit V2-Schema:** trennt den Effekt der Ingenieur-Werkzeuge vom Effekt des Berichtsformats (Lauf 1 zeigte: V1 erkannte beide Ursachen von S08 im Text, konnte es im alten Befundfeld nur nicht ausdrücken).
 - **B0 – Regelwerk:** deterministische Werkzeuge + feste Entscheidungsregeln (E-204 ∧ T1 > 32 → Pseudo usw.), kein LLM. *Zeigt ehrlich, was ohne KI geht.*
 - **B1 – Einmal-RAG:** ein Modellaufruf mit Statistik + Top-5-Chunks im Prompt, keine Werkzeuge. *Der „Chatbot".*
 - **V1 – heutiger Agent.**
