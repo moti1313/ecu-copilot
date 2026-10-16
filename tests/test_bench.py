@@ -249,3 +249,56 @@ def test_b0_validity_without_cause_claim_on_a_single_invalid_measurement(sim, no
     r = run_b0("?", station=2, variant="B")
     a = next(a for a in r.report["assessments"] if a["scope"]["station"] == 2)
     assert a["test_validity"] == "invalid_temperature" and a["root_cause"] == "unknown"
+
+
+def test_b0_gets_its_scope_from_the_scenario_not_from_faults(sim, now, bm25_index):
+    """S04 injects nothing; B0 must still investigate station 2 / B via make_systems() (reviewer point 1 before run 4)."""
+    from evals.bench import make_systems
+
+    s04 = json.loads((SCENARIO_DIR / "S04-no-fault.json").read_text())
+    assert s04.get("scope") == {"station": 2, "variant": "B"} and s04["setup"] == []
+    tools.configure(index=bm25_index, twin=SimTwin(sim, now))
+    r = make_systems(["b0"], None)["b0"](s04["question"], s04)
+    a = r.report["assessments"]
+    assert a and a[0]["scope"]["station"] == 2 and a[0]["scope"]["variant"] == "B" and a[0]["root_cause"] == "none"
+
+
+def test_summary_separates_regular_and_exploratory_runs():
+    from datetime import UTC, datetime
+
+    from evals.bench import split_runs, summarize
+
+    base = {
+        "completed": True,
+        "finding": "pseudo_failure",
+        "finding_ok": True,
+        "assessments_ok": True,
+        "assessments_exact": True,
+        "root_cause_ok": True,
+        "abstain_ok": True,
+        "required_tools_ok": True,
+        "must_cite_ok": True,
+        "next_test_ok": True,
+        "latency_s": 1.0,
+        "cost_usd": 0.0,
+        "error": None,
+        "prov_live": {"ok": 1, "total": 1},
+        "prov_docs": {"ok": 1, "total": 1},
+        "supp_docs": {"ok": 0, "total": 1},
+        "extra_assessments": 0,
+        "system": "b0",
+        "repeat": 0,
+    }
+    runs = [
+        {**base, "scenario": "S01", "solvable": True, "exploratory": False},
+        {**base, "scenario": "S08w", "solvable": True, "exploratory": True, "finding_ok": False, "assessments_exact": False},
+        {**base, "scenario": "S05", "solvable": False, "exploratory": True, "finding_ok": False, "assessments_exact": False},
+    ]
+    regular, exploratory = split_runs(runs)
+    assert [r["scenario"] for r in regular] == ["S01"] and len(exploratory) == 2
+    text = summarize(runs, "m", datetime.now(UTC))
+    assert "1 regulär, 2 explorativ" in text and "Explorative Läufe" in text
+    head = text.split("Explorative Läufe")[0]
+    assert "| B0 | 100 % | 100 % |" in head  # the regular table is unaffected by the two failed exploratory runs
+    assert "| S08w (E)" in text and "| S05 (E)" in text  # per-scenario table is a real table, one row per scenario
+    assert "\n|\n" not in text  # regression: _per_scenario once returned a string and the table came out one char per line
