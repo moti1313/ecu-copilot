@@ -31,7 +31,7 @@ JUDGE_MODEL = os.environ.get("JUDGE_MODEL") or _DEFAULT_MODELS.get(LLM_PROVIDER,
 AGENT_EFFORT = os.environ.get("AGENT_EFFORT") or "medium"  # low | medium | high
 AGENT_PROFILE = os.environ.get("AGENT_PROFILE") or "v2"  # v1 = original five tools + single finding; v2 = engineering tools + assessments
 AGENT_MAX_TOKENS = int(os.environ.get("AGENT_MAX_TOKENS", "24000"))  # OpenAI counts reasoning tokens here; 8000 truncated every V2 report
-PROMPT_VERSION = "2026-10-16.2"  # bump when the system prompt changes; logged with every answer
+PROMPT_VERSION = "2026-10-16.3"  # bump when the system prompt changes; logged with every answer
 
 # USD per 1M tokens: (input, output, cache_write, cache_read). Used for the cost log only.
 PRICING = {

@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import statistics
 import sys
 import time
@@ -147,7 +148,8 @@ def score(sc: dict, r, chunks, spec) -> dict:
     required_ok = all(t in tools_called for t in truth.get("required_tools", []))
     citations = [e.get("citation", "") for e in rep.get("evidence", []) if e.get("source_type") == "document"]
     must = truth.get("must_cite_any", [])
-    must_cite = any(any(m in c for c in citations) or (m in (r.answer or "")) for m in must) if must else True
+    norm = lambda t: re.sub(r"\s*(§|item|section|abschnitt)\s*", " ", str(t), flags=re.I).replace("  ", " ").strip().lower()  # noqa: E731
+    must_cite = any(any(norm(m) in norm(c) for c in citations) or (norm(m) in norm(r.answer or "")) for m in must) if must else True
     nt = rep.get("next_test") or {}
     nt_text = json.dumps(nt, ensure_ascii=False)
     next_ok = (

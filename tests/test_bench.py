@@ -155,3 +155,42 @@ def test_extra_assessments_are_counted(bm25_index):
     r.report = parse_report(json.dumps({**base, "assessments": [good, false_claim]}))
     s = score(s01, r, bm25_index._chunks, load_spec())
     assert s["assessments_ok"] and s["extra_assessments"] == 1 and not s["assessments_exact"] and "connector_lot" in s["extra_claims"][0]
+
+
+def test_must_cite_tolerates_section_sign(bm25_index):
+    """The V2 prompt asks for plain section numbers ("4.2"); the truth may say "§4.2" - both must match."""
+    from ecu_copilot.copilot.agent import AskResult, parse_report
+
+    s08 = json.loads((SCENARIO_DIR / "S08-drift-and-bad-lot.json").read_text())
+    ev = {
+        "statement": "x",
+        "source_type": "document",
+        "ref": {
+            "tool_call": None,
+            "field": None,
+            "station": None,
+            "variant": None,
+            "window_minutes": None,
+            "value": None,
+            "doc_id": "TS-DCU-EOL",
+            "revision": "D",
+            "section": "4.2",
+        },
+        "citation": "TS-DCU-EOL 4.2",
+        "supports": "",
+    }
+    r = AskResult(answer="x")
+    r.report = parse_report(
+        json.dumps(
+            {
+                "answer_markdown": "x",
+                "assessments": [],
+                "hypotheses": [],
+                "evidence": [ev],
+                "next_test": None,
+                "affected_components": [],
+                "routing": [],
+            }
+        )
+    )
+    assert score(s08, r, bm25_index._chunks, load_spec())["must_cite_ok"]
