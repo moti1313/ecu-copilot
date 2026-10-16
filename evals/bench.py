@@ -57,6 +57,7 @@ class SnapshotTwin(TwinClient):
         )  # oldest first, as the simulator stores them
         self.now = now
         self.n = len(rows)
+        self.rows = rows
 
     @classmethod
     def from_live(cls, twin: TwinClient, minutes: int = 240) -> SnapshotTwin:
@@ -129,6 +130,15 @@ def score(sc: dict, r, chunks, spec) -> dict:
         ):
             matched += 1
     n_truth = len(truth["assessments"])
+    # extra claims: assessments that match no truth entry and assert a cause (a plain "valid / none / none"
+    # for an unaffected group is not a claim) - reviewer request after run 2
+    extra = [
+        a
+        for a in assessments
+        if not any(_scope_match(ta["scope"], a.get("scope")) and a.get("root_cause") == ta["root_cause"] for ta in truth["assessments"])
+        and a.get("root_cause") != "none"
+        and not (a.get("test_validity") == "valid" and a.get("defect_indication") == "none")
+    ]
     finding = rep.get("finding")
     cause_ok = (
         all(any(a.get("root_cause") == ta["root_cause"] for a in assessments) for ta in truth["assessments"]) if assessments else False
@@ -162,6 +172,9 @@ def score(sc: dict, r, chunks, spec) -> dict:
         "finding_ok": finding == truth["finding"],
         "assessments_matched": f"{matched}/{n_truth}",
         "assessments_ok": matched == n_truth,
+        "extra_assessments": len(extra),
+        "extra_claims": [f"{a.get('scope')} {a.get('test_validity')}/{a.get('defect_indication')}/{a.get('root_cause')}" for a in extra],
+        "assessments_exact": matched == n_truth and not extra,
         "root_cause_ok": cause_ok,
         "abstain_ok": (abstained == truth.get("abstain_expected", False)),
         "required_tools_ok": required_ok,
@@ -231,6 +244,14 @@ def main() -> int:
         f"[bench] provider={config.LLM_PROVIDER} model={model} systems={list(systems)} repeats={args.repeats} scenarios={[s['id'] for s in scenarios]}"
     )
 
+    ts = datetime.now(UTC)
+    out_dir = config.DATA_DIR / "evals"
+    archive = out_dir / f"bench-{ts:%Y%m%d-%H%M%S}"
+    archive.mkdir(parents=True, exist_ok=True)
+    version = git_version()
+    print(
+        f"[bench] code {version['commit'][:10]}{' (dirty)' if version['dirty'] else ''} · prompt {config.PROMPT_VERSION} · archive {archive}"
+    )
     runs = []
     for i_sc, sc in enumerate(scenarios):
         live.reset(seed=1000 + i_sc, history_minutes=30)  # isolation: nothing from the previous scenario lingers
@@ -241,6 +262,9 @@ def main() -> int:
         time.sleep(settle)
         snap = SnapshotTwin.from_live(live)
         tools.configure(index=index, twin=snap)  # every system reads the same frozen data
+        (archive / f"snapshot-{sc['id']}.json").write_text(
+            json.dumps({"scenario": sc, "reference_time": snap.now.isoformat(), "rows": snap.rows}, ensure_ascii=False, default=str)
+        )
         ok, msg = solvable(sc, snap)
         print(
             f"[bench] {sc['id']}: snapshot {snap.n} results, reference {snap.now:%H:%M:%S} · solvability {'OK' if ok else 'NOT MET'} ({msg})"
@@ -258,6 +282,9 @@ def main() -> int:
                         "reference_time": snap.now.isoformat(),
                         "answer": r.answer,
                         "report": r.report,
+                        "tool_calls": [
+                            {"name": c.name, "input": c.input, "duration_ms": c.duration_ms, "output": c.output} for c in r.tool_calls
+                        ],
                     }
                 )
                 runs.append(s)
@@ -268,10 +295,7 @@ def main() -> int:
                 )
         live.clear_faults()
 
-    out_dir = config.DATA_DIR / "evals"
-    out_dir.mkdir(parents=True, exist_ok=True)
-    ts = datetime.now(UTC)
-    out = out_dir / f"bench-{ts:%Y%m%d-%H%M%S}.json"
+    out = archive / "runs.json"
     out.write_text(
         json.dumps(
             {
@@ -280,6 +304,8 @@ def main() -> int:
                 "prompt_version": config.PROMPT_VERSION,
                 "repeats": args.repeats,
                 "max_tokens": config.AGENT_MAX_TOKENS,
+                "effort": config.AGENT_EFFORT,
+                "code": version,
                 "runs": runs,
             },
             ensure_ascii=False,
@@ -295,6 +321,17 @@ def main() -> int:
     results_md.write_text(prev.rstrip("\n") + "\n\n" + table + "\n", encoding="utf-8")
     print(f"[bench] report: {out} · design/RESULTS.md updated")
     return 0
+
+
+def git_version() -> dict:
+    import subprocess
+
+    try:
+        commit = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True, cwd=ROOT, check=True).stdout.strip()
+        dirty = bool(subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True, cwd=ROOT).stdout.strip())
+    except Exception:  # noqa: BLE001
+        commit, dirty = "unknown", True
+    return {"commit": commit, "dirty": dirty, "prompt_version": config.PROMPT_VERSION}
 
 
 def _pct(xs) -> str:
@@ -321,8 +358,8 @@ def summarize(runs: list[dict], model: str, ts: datetime) -> str:
     lines = [
         f"## {ts:%Y-%m-%d %H:%M} UTC · Modell {model} · max_tokens {config.AGENT_MAX_TOKENS} · Szenarien {', '.join(scenarios)} · {len(runs)} Läufe · eingefrorener Datenstand je Szenario",
         "",
-        "| System | Abschluss | Befund korrekt | Bewertungen korrekt | Ursache | Zurückhaltung ok | Pflicht-Tools | Zitat vorh. | Herkunft live | Herkunft Dok | Stützung Dok | Nächster Test | Diagnose-Konsistenz | Ø s | Ø $ |",
-        "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|",
+        "| System | Abschluss | Befund korrekt | Bewertungen korrekt | Ursache | Zusatz-Behaupt. Ø | Bewertungen exakt | Zurückhaltung ok | Pflicht-Tools | Zitat vorh. | Herkunft live | Herkunft Dok | Stützung Dok | Nächster Test | Diagnose-Konsistenz | Ø s | Ø $ |",
+        "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|",
     ]
     for s in systems:
         rs = [r for r in runs if r["system"] == s]
@@ -335,7 +372,7 @@ def summarize(runs: list[dict], model: str, ts: datetime) -> str:
         cons_txt = f"{100 * statistics.fmean(cons):.0f} %" if cons else "n/a"
         lines.append(
             f"| {s.upper()} | {_pct([r['completed'] for r in rs])} | {_pct([r['finding_ok'] for r in rs])} | {_pct([r['assessments_ok'] for r in rs])} | {_pct([r['root_cause_ok'] for r in rs])} | "
-            f"{_pct([r['abstain_ok'] for r in rs])} | {_pct([r['required_tools_ok'] for r in rs])} | {_pct([r['must_cite_ok'] for r in rs])} | {_rate(done, 'prov_live')} | {_rate(done, 'prov_docs')} | {_rate(done, 'supp_docs')} | "
+            f"{statistics.fmean(r.get('extra_assessments', 0) for r in rs):.2f} | {_pct([r.get('assessments_exact', False) for r in rs])} | {_pct([r['abstain_ok'] for r in rs])} | {_pct([r['required_tools_ok'] for r in rs])} | {_pct([r['must_cite_ok'] for r in rs])} | {_rate(done, 'prov_live')} | {_rate(done, 'prov_docs')} | {_rate(done, 'supp_docs')} | "
             f"{_pct([r['next_test_ok'] for r in rs])} | {cons_txt} | {statistics.fmean(r['latency_s'] for r in rs):.1f} | {statistics.fmean(r['cost_usd'] for r in rs):.3f} |"
         )
     lines += [
@@ -358,7 +395,7 @@ def summarize(runs: list[dict], model: str, ts: datetime) -> str:
         lines += ["", f"Fehler: {len(errs)} Läufe – " + "; ".join(f"{r['system']}/{r['scenario']}: {r['error'][:80]}" for r in errs[:6])]
     lines += [
         "",
-        "Lesehilfe: *Abschluss* = auswertbarer Report ohne Fehler; *Diagnose-Konsistenz* = Mehrheitsanteil nur über abgeschlossene Läufe; *Zurückhaltung ok* = 'unklar' genau dann, wenn die Wahrheit es verlangt; *Herkunft live* n/a für Systeme ohne Referenzen (V1-Schema). B0 kennt die Szenario-Scope-Angabe (Station/Variante) aus der Szenariodefinition, nicht aus der Frage.",
+        "Lesehilfe: *Abschluss* = auswertbarer Report ohne Fehler; *Diagnose-Konsistenz* = Mehrheitsanteil nur über abgeschlossene Läufe; *Zurückhaltung ok* = 'unklar' genau dann, wenn die Wahrheit es verlangt; *Herkunft live* n/a für Systeme ohne Referenzen (V1-Schema). *Herkunft* heißt: Die automatische Prüfung konnte die angegebene Quelle bzw. den referenzierten Wert nachvollziehen – nicht, dass die Aussage oder Diagnose richtig ist. *Stützung Dok* ist eine Schlüsselwort-Heuristik. *Zusatz-Behaupt.* = Bewertungen, die keiner Wahrheits-Gruppe entsprechen und eine Ursache behaupten; *Bewertungen exakt* = alle erwarteten gefunden und keine Zusatzbehauptung. B0 kennt die Szenario-Scope-Angabe (Station/Variante) aus der Szenariodefinition, nicht aus der Frage.",
     ]
     return "\n".join(lines)
 
