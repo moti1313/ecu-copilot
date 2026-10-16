@@ -72,7 +72,7 @@ Try it: click **Temperaturdrift St. 2**, wait a minute, ask
 
 ```bash
 uv run ruff check . && uv run ruff format --check .
-uv run pytest                        # 25 tests, no API key, no model download (RAG_MODE=bm25 in CI)
+uv run pytest                        # 34 tests, no API key, no model download (RAG_MODE=bm25 in CI)
 uv run python evals/run.py           # golden set against the live agent; needs twin running + API key
 uv run python evals/run.py --only live-drift-pseudo-failure --no-judge
 ```
@@ -80,6 +80,21 @@ uv run python evals/run.py --only live-drift-pseudo-failure --no-judge
 The eval has three layers per case - expected tools called (deterministic), key facts present
 (deterministic), rubric satisfied (LLM-as-judge). It exits non-zero below `EVAL_MIN_PASS` (0.8),
 which is the gate in the manual `eval` job of `.gitlab-ci.yml` / GitHub Actions.
+
+## The investigation workspace
+
+The agent's final message is a structured **investigation report** (JSON schema enforced on both
+providers): finding type, hypotheses with *evidence strength* (strong / moderate / weak / rejected -
+never a made-up confidence number), evidence items with source (`live` tool data or `document`
+citation), the proposed next test, and the affected components. The dashboard renders it as:
+
+- a **signal strip** (I_q and T1 over time, limit line, invalid-temperature band, fail markers, cursor),
+- a **schematic** of the door drive with the fault path per failure code and clickable parts (BOM / PCN),
+- the **agent's activity** (every tool call with arguments, duration and what came back),
+- hypotheses, evidence table, next test - and **approval by the engineer**, logged with the trace id
+  (`POST /decisions`).
+
+All test data comes from the digital twin and the documents are synthetic; the UI says so.
 
 ## How the demo scenario works
 
