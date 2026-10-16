@@ -2,19 +2,60 @@
   "id": "S01-temperature-drift",
   "title": "Temperaturdrift an Station 2 – Pseudo-Fehler E-204 bei Variante B",
   "question": "Warum fällt Variante B an Station 2 seit 10 Minuten überdurchschnittlich oft durch? Ist das ein echter Fehler oder ein Pseudo-Fehler?",
-  "setup": [{"type": "temperature_drift", "station": 2, "delta_c": 10, "ramp_s": 0}],
+  "scope": {
+    "station": 2,
+    "variant": "B"
+  },
+  "setup": [
+    {
+      "type": "temperature_drift",
+      "station": 2,
+      "delta_c": 10,
+      "ramp_s": 0
+    }
+  ],
   "settle_s": 150,
   "truth": {
     "assessments": [
-      {"scope": {"station": 2, "variant": "B"}, "test_validity": "invalid_temperature", "defect_indication": "none_assessable", "root_cause": "station_temperature"}
+      {
+        "scope": {
+          "station": 2,
+          "variant": "B"
+        },
+        "test_validity": "invalid_temperature",
+        "defect_indication": "none_assessable",
+        "root_cause": "station_temperature"
+      }
     ],
     "finding": "pseudo_failure",
-    "components_any": ["T1", "U1"],
-    "required_tools": ["check_validity"],
-    "must_cite_any": ["TS-DCU-EOL §4.2", "TS-DCU-EOL 4.2"],
-    "next_test_keywords_any": ["Re-Test", "Wiederhol", "re-test", "erneut", "Abkühl", "cool"],
+    "components_any": [
+      "T1",
+      "U1"
+    ],
+    "required_tools": [
+      "check_validity"
+    ],
+    "must_cite_any": [
+      "TS-DCU-EOL §4.2",
+      "TS-DCU-EOL 4.2"
+    ],
+    "next_test_keywords_any": [
+      "Re-Test",
+      "Wiederhol",
+      "re-test",
+      "erneut",
+      "Abkühl",
+      "cool"
+    ],
     "block_units": false,
     "abstain_expected": false
   },
-  "solvability": {"check": "validity_share", "station": 2, "variant": "B", "code": "E-204", "min_invalid_share_pct": 80, "min_failures": 8}
+  "solvability": {
+    "check": "validity_share",
+    "station": 2,
+    "variant": "B",
+    "code": "E-204",
+    "min_invalid_share_pct": 80,
+    "min_failures": 8
+  }
 }

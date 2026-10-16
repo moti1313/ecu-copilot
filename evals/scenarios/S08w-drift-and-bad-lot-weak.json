@@ -2,6 +2,10 @@
   "id": "S08w-drift-and-bad-lot-weak",
   "title": "Zwei Ursachen gleichzeitig: Temperaturdrift an Station 2 und schlechtes Steckverbinder-Los – SCHWACHSIGNAL-Versuch (Bedingungen von Lauf 3: 150 s, Los-Rate 0,25; Lösbarkeitskriterium nicht garantiert)",
   "question": "An Station 2 steigt die Ausfallrate bei Variante B. Was ist los? Gibt es mehr als eine Ursache?",
+  "scope": {
+    "station": 2,
+    "variant": "B"
+  },
   "setup": [
     {
       "type": "temperature_drift",
@@ -17,6 +21,7 @@
     }
   ],
   "settle_s": 150,
+  "exploratory": true,
   "truth": {
     "assessments": [
       {

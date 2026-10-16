@@ -87,23 +87,45 @@ class SnapshotTwin(TwinClient):
 
 
 # --- solvability -------------------------------------------------------------------------------------
-def solvable(sc: dict, twin: TwinClient) -> tuple[bool, str]:
+def solvable(sc: dict, twin: TwinClient) -> tuple[bool, str, dict]:
+    """(ok, message, info). Solvability checks DATA prerequisites (enough results, the injected condition is
+    present in the window). They never use the detector under test to decide whether a normal case counts:
+    a false alarm of detect_change on an unchanged line is a RESULT (recorded in `info`), not a reason to drop S04."""
     s = sc.get("solvability") or {}
     if not s:
-        return True, "no check"
+        return True, "no check", {}
     rows = twin.results(station=s.get("station"), variant=s.get("variant"), minutes=10, only_failed=False, limit=10000)
-    if s.get("check") == "no_change":  # S04: the line must really be normal
+    if s.get("check") == "data_ok":  # S04: enough data, normal rate - the detector's verdict is recorded, not gating
         rate = 100.0 * sum(1 for r in rows if r["verdict"] == "fail") / len(rows) if rows else 0.0
         chg = detect_change(
             twin.results(station=s.get("station"), variant=s.get("variant"), minutes=60, only_failed=False, limit=10000),
             metric="failure_rate",
         )
-        ok = rate <= s.get("max_rate_pct", 4.0) and not chg.get("significant")
-        return ok, f"rate 10 min {rate:.1f} %, change significant={chg.get('significant')}"
-    if s.get("check") == "decoupled":  # S05: reported T1 high, current does not follow
+        ok = len(rows) >= s.get("min_results", 150) and rate <= s.get("max_rate_pct", 4.0)
+        info = {
+            "results_10min": len(rows),
+            "rate_10min_pct": round(rate, 1),
+            "detector_false_alarm": bool(chg.get("significant")),
+            "detector_z": chg.get("z"),
+        }
+        return (
+            ok,
+            f"{len(rows)} results, rate 10 min {rate:.1f} %; detect_change significant={chg.get('significant')} (recorded, not gating)",
+            info,
+        )
+    if s.get("check") == "decoupled":  # S05: reported T1 high in the RECENT window, current does not follow
         d = describe_signal(rows, load_spec())
-        ok = d.get("iq_t1_relation") == "decoupled" and d["stats"]["board_temp_c"]["mean"] >= s.get("min_reported_temp_c", 32.0)
-        return ok, f"relation={d.get('iq_t1_relation')}, reported T1 mean {d['stats']['board_temp_c']['mean']} °C"
+        win = s.get("window_minutes", 3)
+        recent = twin.results(station=s.get("station"), variant=s.get("variant"), minutes=win, only_failed=False, limit=10000)
+        t_recent = sum(r["measurements"]["board_temp_c"] for r in recent) / len(recent) if recent else 0.0
+        ok = d.get("iq_t1_relation") == "decoupled" and t_recent >= s.get("min_reported_temp_c", 32.0) and len(recent) >= 20
+        info = {
+            "relation": d.get("iq_t1_relation"),
+            "reported_t1_recent_c": round(t_recent, 1),
+            "recent_results": len(recent),
+            "ratio": (d.get("iq_model") or {}).get("ratio"),
+        }
+        return ok, f"relation={d.get('iq_t1_relation')}, reported T1 last {win} min {t_recent:.1f} °C ({len(recent)} results)", info
     v = check_validity(rows, load_spec())
     code = v["codes"].get(s.get("code"), {})
     fails = code.get("fail_verdicts", 0)
@@ -117,7 +139,7 @@ def solvable(sc: dict, twin: TwinClient) -> tuple[bool, str]:
         lot_ok = c["concentrated"] and top.get("group") == s.get("lot") and top.get("failed", 0) >= s.get("min_lot_failures", 1)
         msg += f"; lot {top.get('group')} {top.get('failed')} fails, concentrated={c['concentrated']}"
         ok = ok and lot_ok
-    return ok, msg
+    return ok, msg, {"code_fails": fails, "invalid_share_pct": round(share, 1)}
 
 
 # --- scoring ------------------------------------------------------------------------------------------
@@ -225,6 +247,10 @@ def make_systems(names: list[str], model: str | None):
 
 
 def _scope(sc: dict) -> dict:
+    """The investigation scope B0 is given (it cannot read the question). Explicit `scope` in the scenario wins;
+    deriving it from the injected faults is only a fallback - S04 has no fault and still has a scope."""
+    if sc.get("scope"):
+        return dict(sc["scope"])
     for f in sc.get("setup", []):
         if "station" in f:
             variant = next(
@@ -281,9 +307,11 @@ def main() -> int:
         (archive / f"snapshot-{sc['id']}.json").write_text(
             json.dumps({"scenario": sc, "reference_time": snap.now.isoformat(), "rows": snap.rows}, ensure_ascii=False, default=str)
         )
-        ok, msg = solvable(sc, snap)
+        ok, msg, info = solvable(sc, snap)
+        exploratory = bool(sc.get("exploratory")) or not ok
         print(
             f"[bench] {sc['id']}: snapshot {snap.n} results, reference {snap.now:%H:%M:%S} · solvability {'OK' if ok else 'NOT MET'} ({msg})"
+            + (" · EXPLORATIV" if exploratory else "")
         )
         for name, fn in systems.items():
             for rep_i in range(args.repeats):
@@ -295,6 +323,8 @@ def main() -> int:
                         "system": name,
                         "repeat": rep_i,
                         "solvable": ok,
+                        "solvability_info": info,
+                        "exploratory": exploratory,
                         "reference_time": snap.now.isoformat(),
                         "answer": r.answer,
                         "report": r.report,
@@ -368,11 +398,37 @@ def consistency(findings: list) -> float | None:
     return Counter(valid).most_common(1)[0][1] / len(valid)
 
 
+def split_runs(runs: list[dict]) -> tuple[list[dict], list[dict]]:
+    """Regular = scenario not marked exploratory AND its solvability criterion met. Everything else is reported
+    separately and never enters the headline rates (CONCEPT §10)."""
+    regular = [r for r in runs if not r.get("exploratory") and r.get("solvable", True)]
+    exploratory = [r for r in runs if r not in regular]
+    return regular, exploratory
+
+
 def summarize(runs: list[dict], model: str, ts: datetime) -> str:
+    regular, exploratory = split_runs(runs)
+    scenarios_all = sorted({r["scenario"] for r in runs})
+    lines = [
+        f"## {ts:%Y-%m-%d %H:%M} UTC · Modell {model} · max_tokens {config.AGENT_MAX_TOKENS} · Szenarien {', '.join(scenarios_all)} · {len(runs)} Läufe ({len(regular)} regulär, {len(exploratory)} explorativ) · eingefrorener Datenstand je Szenario",
+        "",
+    ]
+    lines += _table(regular, "Reguläre Szenarien (Lösbarkeit erfüllt, nicht explorativ) – Gesamtquoten")
+    if exploratory:
+        lines += [""] + _table(
+            exploratory, "Explorative Läufe (als explorativ markiert oder Lösbarkeit nicht erfüllt) – separat, nicht in der Gesamtquote"
+        )
+    lines += _per_scenario(runs)
+    return "\n".join(lines)
+
+
+def _table(runs: list[dict], title: str) -> list[str]:
+    if not runs:
+        return [f"**{title}:** keine Läufe"]
     systems = sorted({r["system"] for r in runs}, key=lambda s: SYSTEM_ORDER.index(s) if s in SYSTEM_ORDER else 9)
     scenarios = sorted({r["scenario"] for r in runs})
     lines = [
-        f"## {ts:%Y-%m-%d %H:%M} UTC · Modell {model} · max_tokens {config.AGENT_MAX_TOKENS} · Szenarien {', '.join(scenarios)} · {len(runs)} Läufe · eingefrorener Datenstand je Szenario",
+        f"**{title}** ({', '.join(scenarios)}, {len(runs)} Läufe)",
         "",
         "| System | Abschluss | Befund korrekt | Bewertungen korrekt | Ursache | Zusatz-Behaupt. Ø | Bewertungen exakt | Zurückhaltung ok | Pflicht-Tools | Zitat vorh. | Herkunft live | Herkunft Dok | Stützung Dok | Nächster Test | Diagnose-Konsistenz | Ø s | Ø $ |",
         "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|",
@@ -391,9 +447,15 @@ def summarize(runs: list[dict], model: str, ts: datetime) -> str:
             f"{statistics.fmean(r.get('extra_assessments', 0) for r in rs):.2f} | {_pct([r.get('assessments_exact', False) for r in rs])} | {_pct([r['abstain_ok'] for r in rs])} | {_pct([r['required_tools_ok'] for r in rs])} | {_pct([r['must_cite_ok'] for r in rs])} | {_rate(done, 'prov_live')} | {_rate(done, 'prov_docs')} | {_rate(done, 'supp_docs')} | "
             f"{_pct([r['next_test_ok'] for r in rs])} | {cons_txt} | {statistics.fmean(r['latency_s'] for r in rs):.1f} | {statistics.fmean(r['cost_usd'] for r in rs):.3f} |"
         )
-    lines += [
+    return lines
+
+
+def _per_scenario(runs: list[dict]) -> list[str]:
+    systems = sorted({r["system"] for r in runs}, key=lambda s: SYSTEM_ORDER.index(s) if s in SYSTEM_ORDER else 9)
+    scenarios = sorted({r["scenario"] for r in runs})
+    lines = [
         "",
-        "Je Szenario: abgeschlossen / Befund korrekt / Bewertungen korrekt (über Wiederholungen):",
+        "Je Szenario: abgeschlossen / Befund korrekt / Bewertungen exakt (über Wiederholungen); (E) = explorativ:",
         "",
         "| Szenario | " + " | ".join(s.upper() for s in systems) + " |",
         "|---|" + "---|" * len(systems),
@@ -403,15 +465,22 @@ def summarize(runs: list[dict], model: str, ts: datetime) -> str:
         for s in systems:
             rs = [r for r in runs if r["system"] == s and r["scenario"] == sc]
             cells.append(
-                f"{sum(1 for r in rs if r['completed'])} / {sum(1 for r in rs if r['finding_ok'])} / {sum(1 for r in rs if r['assessments_ok'])} von {len(rs)}"
+                f"{sum(1 for r in rs if r['completed'])} / {sum(1 for r in rs if r['finding_ok'])} / {sum(1 for r in rs if r.get('assessments_exact'))} von {len(rs)}"
             )
-        lines.append(f"| {sc} | " + " | ".join(cells) + " |")
+        flag = " (E)" if any(r.get("exploratory") for r in runs if r["scenario"] == sc) else ""
+        info = next((r.get("solvability_info") for r in runs if r["scenario"] == sc and r.get("solvability_info")), None)
+        extra = (
+            f" · Detektor-Fehlalarm auf unveränderter Linie: {'ja' if info.get('detector_false_alarm') else 'nein'}"
+            if info and "detector_false_alarm" in info
+            else ""
+        )
+        lines.append(f"| {sc}{flag}{extra} | " + " | ".join(cells) + " |")
     errs = [r for r in runs if r["error"]]
     if errs:
         lines += ["", f"Fehler: {len(errs)} Läufe – " + "; ".join(f"{r['system']}/{r['scenario']}: {r['error'][:80]}" for r in errs[:6])]
     lines += [
         "",
-        "Lesehilfe: *Abschluss* = auswertbarer Report ohne Fehler; *Diagnose-Konsistenz* = Mehrheitsanteil nur über abgeschlossene Läufe; *Zurückhaltung ok* = 'unklar' genau dann, wenn die Wahrheit es verlangt; *Herkunft live* n/a für Systeme ohne Referenzen (V1-Schema). *Herkunft* heißt: Die automatische Prüfung konnte die angegebene Quelle bzw. den referenzierten Wert nachvollziehen – nicht, dass die Aussage oder Diagnose richtig ist. *Stützung Dok* ist eine Schlüsselwort-Heuristik. *Zusatz-Behaupt.* = Bewertungen, die keiner Wahrheits-Gruppe entsprechen und eine Ursache behaupten; *Bewertungen exakt* = alle erwarteten gefunden und keine Zusatzbehauptung. B0 kennt die Szenario-Scope-Angabe (Station/Variante) aus der Szenariodefinition, nicht aus der Frage.",
+        "Lesehilfe: *regulär* = Lösbarkeit erfüllt und nicht explorativ; nur diese Läufe bilden die Gesamtquoten. *Abschluss* = auswertbarer Report ohne Fehler; *Diagnose-Konsistenz* = Mehrheitsanteil nur über abgeschlossene Läufe; *Zurückhaltung ok* = 'unklar' genau dann, wenn die Wahrheit es verlangt; *Herkunft live* n/a für Systeme ohne Referenzen (V1-Schema). *Herkunft* heißt: Die automatische Prüfung konnte die angegebene Quelle bzw. den referenzierten Wert nachvollziehen – nicht, dass die Aussage oder Diagnose richtig ist. *Stützung Dok* ist eine Schlüsselwort-Heuristik. *Zusatz-Behaupt.* = Bewertungen, die keiner Wahrheits-Gruppe entsprechen und eine Ursache behaupten; *Bewertungen exakt* = alle erwarteten gefunden und keine Zusatzbehauptung. B0 kennt die Szenario-Scope-Angabe (Station/Variante) aus der Szenariodefinition, nicht aus der Frage.",
     ]
     return "\n".join(lines)
 

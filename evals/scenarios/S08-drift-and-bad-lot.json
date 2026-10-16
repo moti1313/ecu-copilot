@@ -2,6 +2,10 @@
   "id": "S08-drift-and-bad-lot",
   "title": "Zwei Ursachen gleichzeitig: Temperaturdrift an Station 2 und schlechtes Steckverbinder-Los (regulär, vorab festgelegt)",
   "question": "An Station 2 steigt die Ausfallrate bei Variante B. Was ist los? Gibt es mehr als eine Ursache?",
+  "scope": {
+    "station": 2,
+    "variant": "B"
+  },
   "setup": [
     {
       "type": "temperature_drift",

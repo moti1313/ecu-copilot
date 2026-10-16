@@ -220,7 +220,7 @@ def test_b0_abstains_on_s04_and_names_sensor_on_s05(sim, now, bm25_index):
     spec = load_spec()
     twin = SimTwin(sim, now)
     tools.configure(index=bm25_index, twin=twin)
-    ok, msg = solvable(s04, twin)
+    ok, msg, _ = solvable(s04, twin)
     assert ok, msg
     r = run_b0(s04["question"], station=2, variant="B")
     s = score(s04, r, bm25_index._chunks, spec)
@@ -229,7 +229,7 @@ def test_b0_abstains_on_s04_and_names_sensor_on_s05(sim, now, bm25_index):
     end = _drive(sim, now, [SensorOffset(station=2, offset_c=9.0)], n=400)
     twin = SimTwin(sim, end)
     tools.configure(index=bm25_index, twin=twin)
-    ok, msg = solvable(s05, twin)
+    ok, msg, _ = solvable(s05, twin)
     assert ok, msg
     r = run_b0(s05["question"], station=2, variant="B")
     s = score(s05, r, bm25_index._chunks, spec)

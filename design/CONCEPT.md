@@ -121,7 +121,8 @@ Festgelegt **vor** dem Lauf; Änderungen danach werden als solche dokumentiert.
 | Modell / Konfiguration | gpt-5, effort medium, max_tokens 24 000, Prompt 2026-10-16.3 (Regel 13 als Versuch – Wirkung wird an S01 „exakt" abgelesen) |
 | Primärmetriken | Bewertungen **exakt** (gefunden ∧ keine Zusatzbehauptung), Befund korrekt, **Zurückhaltung ok** (S04/S05), Herkunft live/Dok |
 | Sekundär | Pflicht-Werkzeuge, Nächster Test, Diagnose-Konsistenz (nur abgeschlossene), Latenz, Kosten; Stützung Dok nur informativ |
-| Erfolgskriterium für „Agent lohnt sich" | V2 ≥ B0 auf S04/S05 bei „exakt" **und** V2 ohne Zusatzbehauptung auf S01 ≥ 2/3. Trifft das nicht zu, wird das so festgehalten. |
+| **Funktionskriterium** (kein Qualitätsverlust gegenüber dem Regelwerk) | V2 ≥ B0 auf S04/S05 bei „exakt" **und** V2 ohne Zusatzbehauptung auf S01 ≥ 2/3. Trifft das nicht zu, wird das so festgehalten. **Das ist kein Nachweis „Agent lohnt sich"** – zusätzlicher Nutzen (Erklärung, Belege, Testvorschlag, Fälle außerhalb des Regelsatzes) wird separat und qualitativ beurteilt. |
+| Korrekturen nach Probelauf (16.10., spät) | B0 bekommt den Untersuchungsbezug aus dem expliziten Szenariofeld `scope` (unabhängig von der Störungsinjektion); S05 Wartezeit 240 s, Temperaturkriterium auf den letzten 3 Minuten; S04-Lösbarkeit prüft nur Datenmenge und Normalrate – ein Fehlalarm von `detect_change` auf der unveränderten Linie wird als **Ergebnis** protokolliert, nicht als Ausschlussgrund; explorative Läufe (S08w, nicht erfüllte Lösbarkeit) werden in Zusammenfassung und Rescoring getrennt ausgewiesen. Lauf 4 startet erst nach einem erneut bestandenen kostenlosen Probelauf (nur B0). |
 | Archiv | vollständig (Schnappschuss, Werkzeugausgaben, Commit, Prompt-Version) – ab diesem Lauf vorhanden |
 | Kosten/Dauer (Schätzung) | ≈ 45 Modellläufe ≈ 5 $, ≈ 60 min |
 

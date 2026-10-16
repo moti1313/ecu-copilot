@@ -41,7 +41,12 @@ def main(path: str) -> int:
         ex = extra_claims(truth, r.get("report"))
         rows.append({**r, "extra_assessments": len(ex), "extra_claims": ex, "assessments_exact": r["assessments_ok"] and not ex})
     systems = sorted({r["system"] for r in rows}, key=lambda s: SYSTEM_ORDER.index(s) if s in SYSTEM_ORDER else 9)
-    print(f"Re-score of {path} · model {data.get('model')} · {len(rows)} runs\n")
+    regular = [r for r in rows if not r.get("exploratory") and r.get("solvable", True)]
+    n_expl = len(rows) - len(regular)
+    print(
+        f"Re-score of {path} · model {data.get('model')} · {len(rows)} runs ({len(regular)} regular, {n_expl} exploratory - excluded below)\n"
+    )
+    rows = regular
     print("| System | Bewertungen gefunden | Zusatz-Behaupt. Ø | Läufe mit Zusatzbehauptung | Bewertungen exakt | Befund korrekt |")
     print("|---|---|---|---|---|---|")
     for s in systems:

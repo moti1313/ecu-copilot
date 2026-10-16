@@ -2,19 +2,55 @@
   "id": "S05-sensor-offset",
   "title": "Defekter T1-Sensor: gemeldete Temperatur +9 K, physikalisch normal – Ruhestrom folgt nicht",
   "question": "An Station 2 meldet die Stationstemperatur T1 seit einigen Minuten über 32 °C. Müssen die Ruhestrom-Prüfungen von Variante B als ungültig gelten? Was ist los?",
-  "setup": [{"type": "sensor_offset", "station": 2, "offset_c": 9.0}],
-  "settle_s": 150,
+  "scope": {
+    "station": 2,
+    "variant": "B"
+  },
+  "setup": [
+    {
+      "type": "sensor_offset",
+      "station": 2,
+      "offset_c": 9.0
+    }
+  ],
+  "settle_s": 240,
   "truth": {
     "assessments": [
-      {"scope": {"station": 2, "variant": "B"}, "test_validity": "unknown", "defect_indication": "none", "root_cause": "sensor_t1"}
+      {
+        "scope": {
+          "station": 2,
+          "variant": "B"
+        },
+        "test_validity": "unknown",
+        "defect_indication": "none",
+        "root_cause": "sensor_t1"
+      }
     ],
     "finding": "unclear",
-    "components_any": ["T1"],
-    "required_tools": ["describe_signal"],
-    "must_cite_any": ["TS-DCU-EOL 4.2", "DS-MCU-XM32F7 7.3"],
-    "next_test_keywords_any": ["Sensor", "Referenz", "Thermometer", "T1"],
+    "components_any": [
+      "T1"
+    ],
+    "required_tools": [
+      "describe_signal"
+    ],
+    "must_cite_any": [
+      "TS-DCU-EOL 4.2",
+      "DS-MCU-XM32F7 7.3"
+    ],
+    "next_test_keywords_any": [
+      "Sensor",
+      "Referenz",
+      "Thermometer",
+      "T1"
+    ],
     "block_units": false,
     "abstain_expected": true
   },
-  "solvability": {"check": "decoupled", "station": 2, "variant": "B", "min_reported_temp_c": 32.0}
+  "solvability": {
+    "check": "decoupled",
+    "station": 2,
+    "variant": "B",
+    "min_reported_temp_c": 32.0,
+    "window_minutes": 3
+  }
 }
