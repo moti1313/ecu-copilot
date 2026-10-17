@@ -1,0 +1,269 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+  "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="1152pt" height="648pt" viewBox="0 0 1152 648" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <title>E-204 / Ruhestrom zu hoch</title>
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:title>E-204 / Ruhestrom zu hoch</dc:title>
+    <dc:date>2026-10-17T13:15:22.785077</dc:date>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Matplotlib v3.6.3, https://matplotlib.org/</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 648 
+L 1152 648 
+L 1152 0 
+L 0 0 
+z
+" style="fill: #fcfcfa"/>
+  </g>
+  <g id="axes_1">
+   <g id="line2d_1">
+    <path d="M 54 603.36 
+L 1098 603.36 
+" clip-path="url(#pbf6f068c42)" style="fill: none; stroke: #d6d8d7; stroke-width: 0.8; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_2">
+    <path d="M 749.52 161.55 
+L 763.2 161.55 
+" clip-path="url(#pbf6f068c42)" style="fill: none; stroke: #bb4c2b; stroke-width: 2; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_3">
+    <path d="M 943.2 161.55 
+L 956.88 161.55 
+" clip-path="url(#pbf6f068c42)" style="fill: none; stroke: #bb4c2b; stroke-width: 2; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_4">
+    <path d="M 749.52 179.1 
+L 763.2 179.1 
+" clip-path="url(#pbf6f068c42)" style="fill: none; stroke: #bb4c2b; stroke-width: 2; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_5">
+    <path d="M 943.2 179.1 
+L 956.88 179.1 
+" clip-path="url(#pbf6f068c42)" style="fill: none; stroke: #bb4c2b; stroke-width: 2; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_6">
+    <path d="M 749.52 196.65 
+L 763.2 196.65 
+" clip-path="url(#pbf6f068c42)" style="fill: none; stroke: #bb4c2b; stroke-width: 2; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_7">
+    <path d="M 943.2 196.65 
+L 956.88 196.65 
+" clip-path="url(#pbf6f068c42)" style="fill: none; stroke: #bb4c2b; stroke-width: 2; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_8">
+    <path d="M 749.52 214.2 
+L 763.2 214.2 
+" clip-path="url(#pbf6f068c42)" style="fill: none; stroke: #bb4c2b; stroke-width: 2; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_9">
+    <path d="M 943.2 214.2 
+L 956.88 214.2 
+" clip-path="url(#pbf6f068c42)" style="fill: none; stroke: #bb4c2b; stroke-width: 2; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_10">
+    <path d="M 749.52 231.75 
+L 763.2 231.75 
+" clip-path="url(#pbf6f068c42)" style="fill: none; stroke: #bb4c2b; stroke-width: 2; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_11">
+    <path d="M 943.2 231.75 
+L 956.88 231.75 
+" clip-path="url(#pbf6f068c42)" style="fill: none; stroke: #bb4c2b; stroke-width: 2; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_12">
+    <path d="M 749.52 249.3 
+L 763.2 249.3 
+" clip-path="url(#pbf6f068c42)" style="fill: none; stroke: #bb4c2b; stroke-width: 2; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_13">
+    <path d="M 943.2 249.3 
+L 956.88 249.3 
+" clip-path="url(#pbf6f068c42)" style="fill: none; stroke: #bb4c2b; stroke-width: 2; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_14">
+    <path d="M 749.52 266.85 
+L 763.2 266.85 
+" clip-path="url(#pbf6f068c42)" style="fill: none; stroke: #bb4c2b; stroke-width: 2; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_15">
+    <path d="M 943.2 266.85 
+L 956.88 266.85 
+" clip-path="url(#pbf6f068c42)" style="fill: none; stroke: #bb4c2b; stroke-width: 2; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_16">
+    <path d="M 781.2 130.32 
+L 781.2 144 
+" clip-path="url(#pbf6f068c42)" style="fill: none; stroke: #bb4c2b; stroke-width: 2; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_17">
+    <path d="M 781.2 284.4 
+L 781.2 298.08 
+" clip-path="url(#pbf6f068c42)" style="fill: none; stroke: #bb4c2b; stroke-width: 2; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_18">
+    <path d="M 799.2 130.32 
+L 799.2 144 
+" clip-path="url(#pbf6f068c42)" style="fill: none; stroke: #bb4c2b; stroke-width: 2; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_19">
+    <path d="M 799.2 284.4 
+L 799.2 298.08 
+" clip-path="url(#pbf6f068c42)" style="fill: none; stroke: #bb4c2b; stroke-width: 2; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_20">
+    <path d="M 817.2 130.32 
+L 817.2 144 
+" clip-path="url(#pbf6f068c42)" style="fill: none; stroke: #bb4c2b; stroke-width: 2; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_21">
+    <path d="M 817.2 284.4 
+L 817.2 298.08 
+" clip-path="url(#pbf6f068c42)" style="fill: none; stroke: #bb4c2b; stroke-width: 2; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_22">
+    <path d="M 835.2 130.32 
+L 835.2 144 
+" clip-path="url(#pbf6f068c42)" style="fill: none; stroke: #bb4c2b; stroke-width: 2; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_23">
+    <path d="M 835.2 284.4 
+L 835.2 298.08 
+" clip-path="url(#pbf6f068c42)" style="fill: none; stroke: #bb4c2b; stroke-width: 2; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_24">
+    <path d="M 853.2 130.32 
+L 853.2 144 
+" clip-path="url(#pbf6f068c42)" style="fill: none; stroke: #bb4c2b; stroke-width: 2; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_25">
+    <path d="M 853.2 284.4 
+L 853.2 298.08 
+" clip-path="url(#pbf6f068c42)" style="fill: none; stroke: #bb4c2b; stroke-width: 2; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_26">
+    <path d="M 871.2 130.32 
+L 871.2 144 
+" clip-path="url(#pbf6f068c42)" style="fill: none; stroke: #bb4c2b; stroke-width: 2; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_27">
+    <path d="M 871.2 284.4 
+L 871.2 298.08 
+" clip-path="url(#pbf6f068c42)" style="fill: none; stroke: #bb4c2b; stroke-width: 2; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_28">
+    <path d="M 889.2 130.32 
+L 889.2 144 
+" clip-path="url(#pbf6f068c42)" style="fill: none; stroke: #bb4c2b; stroke-width: 2; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_29">
+    <path d="M 889.2 284.4 
+L 889.2 298.08 
+" clip-path="url(#pbf6f068c42)" style="fill: none; stroke: #bb4c2b; stroke-width: 2; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_30">
+    <path d="M 907.2 130.32 
+L 907.2 144 
+" clip-path="url(#pbf6f068c42)" style="fill: none; stroke: #bb4c2b; stroke-width: 2; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_31">
+    <path d="M 907.2 284.4 
+L 907.2 298.08 
+" clip-path="url(#pbf6f068c42)" style="fill: none; stroke: #bb4c2b; stroke-width: 2; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_32">
+    <path d="M 925.2 130.32 
+L 925.2 144 
+" clip-path="url(#pbf6f068c42)" style="fill: none; stroke: #bb4c2b; stroke-width: 2; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_33">
+    <path d="M 925.2 284.4 
+L 925.2 298.08 
+" clip-path="url(#pbf6f068c42)" style="fill: none; stroke: #bb4c2b; stroke-width: 2; stroke-linecap: square"/>
+   </g>
+   <g id="patch_2">
+    <path d="M 763.2 144 
+L 943.2 144 
+L 943.2 284.4 
+L 763.2 284.4 
+L 763.2 144 
+z
+" clip-path="url(#pbf6f068c42)" style="fill: none; stroke: #bb4c2b; stroke-width: 2.5; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_3">
+    <path d="M 804.6 177.696 
+L 901.8 177.696 
+L 901.8 250.704 
+L 804.6 250.704 
+L 804.6 177.696 
+z
+" clip-path="url(#pbf6f068c42)" style="fill: none; stroke: #bb4c2b; stroke-width: 1.3; stroke-linejoin: miter"/>
+   </g>
+   <g id="text_1">
+    <text style="fill: #20252a; font: 700 11px 'Liberation Sans'; text-anchor: start" x="54" y="33.171563" transform="rotate(-0 54 33.171563)">ECU COPILOT</text>
+   </g>
+   <g id="text_2">
+    <text style="fill: #747a7f; font: 11px 'Liberation Sans'; text-anchor: start" x="180" y="33.171563" transform="rotate(-0 180 33.171563)">Morteza Molaei</text>
+   </g>
+   <g id="text_3">
+    <text style="fill: #747a7f; font: 11px 'Liberation Sans'; text-anchor: end" x="1098" y="33.171563" transform="rotate(-0 1098 33.171563)">Das Problem</text>
+   </g>
+   <g id="text_4">
+    <text style="fill: #747a7f; font: 11px 'Liberation Sans'; text-anchor: start" x="54" y="623.571563" transform="rotate(-0 54 623.571563)">Prototyp / simulierte Daten</text>
+   </g>
+   <g id="text_5">
+    <text style="fill: #20252a; font: 18px 'Liberation Mono'; text-anchor: end" x="1098" y="625.044375" transform="rotate(-0 1098 625.044375)">01</text>
+   </g>
+   <g id="text_6">
+    <text style="fill: #bb4c2b; font: 700 105px 'Liberation Mono'; text-anchor: start" x="54" y="176.892187" transform="rotate(-0 54 176.892187)">E-204</text>
+   </g>
+   <g id="text_7">
+    <text style="fill: #20252a; font: 35px 'Liberation Sans'; text-anchor: start" x="57.6" y="248.564062" transform="rotate(-0 57.6 248.564062)">Ruhestrom zu hoch.</text>
+   </g>
+   <g id="text_8">
+    <text style="fill: #20252a; font: 700 38px 'Liberation Sans'; text-anchor: start" x="57.6" y="409.138125" transform="rotate(-0 57.6 409.138125)">Gerät defekt?</text>
+   </g>
+   <g id="text_9">
+    <text style="fill: #20252a; font: 700 38px 'Liberation Sans'; text-anchor: start" x="57.6" y="466.738125" transform="rotate(-0 57.6 466.738125)">Prüfung ungültig?</text>
+   </g>
+   <g id="text_10">
+    <text style="fill: #bb4c2b; font: 700 30px 'Liberation Mono'; text-anchor: middle" x="853.2" y="211.100625" transform="rotate(-0 853.2 211.100625)">ECU</text>
+   </g>
+   <g id="text_11">
+    <text style="fill: #20252a; font: 49px 'Liberation Mono'; text-anchor: start" x="745.2" y="373.909687" transform="rotate(-0 745.2 373.909687)">483 µA</text>
+   </g>
+   <g id="text_12">
+    <text style="fill: #747a7f; font: 22px 'Liberation Sans'; text-anchor: start" x="748.8" y="411.943125" transform="rotate(-0 748.8 411.943125)">Limit: 450 µA</text>
+   </g>
+   <g id="text_13">
+    <text style="fill: #20252a; font: 30px 'Liberation Mono'; text-anchor: start" x="748.8" y="489.740625" transform="rotate(-0 748.8 489.740625)">T1: 35 °C</text>
+   </g>
+   <g id="text_14">
+    <text style="fill: #747a7f; font: 22px 'Liberation Sans'; text-anchor: start" x="748.8" y="526.423125" transform="rotate(-0 748.8 526.423125)">gültig: 18–32 °C</text>
+   </g>
+   <g id="text_15">
+    <text style="fill: #747a7f; font: 16px 'Liberation Sans'; text-anchor: start" x="57.6" y="562.395" transform="rotate(-0 57.6 562.395)">Illustratives Beispiel · Variante B</text>
+   </g>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="pbf6f068c42">
+   <rect x="0" y="0" width="1152" height="648"/>
+  </clipPath>
+ </defs>
+</svg>

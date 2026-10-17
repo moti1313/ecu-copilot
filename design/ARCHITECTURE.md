@@ -2,6 +2,8 @@
 
 Status: Entwurf zur Abstimmung (16.10.2026). Ergänzt `CONCEPT.md`; Begründungen in `RESEARCH.md`, Ist-Zustand in `AUDIT.md`.
 
+**Einordnung vom 17.10.2026:** Dieses Dokument bleibt der V2-**Zielentwurf** und enthält auch noch nicht umgesetzte Funktionen. Für den am Code abgeglichenen Ist-Stand mit Systemkontext, Datenfluss und Sequenzdiagramm siehe [ARCHITECTURE_CURRENT.md](ARCHITECTURE_CURRENT.md). Präsentationsfolien und Sprechtext: [presentation/README.md](presentation/README.md).
+
 ## 1. Schichten
 
 ```

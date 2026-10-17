@@ -1,51 +1,36 @@
 # ECU Copilot
 
-An AI agent for test engineers on an electronics end-of-line (EOL) line, built as a prototype for a
-production-grade LLM feature: **agent + tools + RAG**, with **tracing, cost accounting, guardrails and evals**
-from day one. It runs against a **digital twin** of three EOL test stations for door control units
-(DCU-A1 / DCU-B2), so the whole thing works on a laptop with `docker compose up`.
+An investigation assistant for test engineers on an electronics end-of-line (EOL) line:
+**one agent + engineering tools + RAG + evidence checks**, with tracing, token-based cost estimates and evals.
+The prototype runs against a stateful **simulator of three parallel EOL test stations** for door control units
+(DCU-A1 / DCU-B2). Test data and engineering documents are synthetic; no physical production line is connected.
 
-> **The story.** A test engineer sees that variant B started failing at station 2 ten minutes ago.
-> Today: pull logs, search the test specification, ask a colleague, type an 8D report - two hours.
-> With the copilot: one question. The agent reads the live data, compares it with the specification,
-> recognises pseudo failures caused by temperature drift, and drafts the 8D report - with citations.
-> And the monitoring shows what it cost and whether the answer was grounded.
+> **The question.** Is a failed test caused by the unit, invalid test conditions, a sensor, or several causes?
+> The engineer opens a test result, investigates with the copilot, inspects the evidence and records a next step.
+> Invalid test conditions do not establish that a unit is healthy. Referenced evidence does not by itself prove
+> a diagnosis. Production accuracy and time saved by engineers have not been established.
+
+**Presentation (German):** [slide PDF](design/presentation/ECU-Copilot-Praesentation.pdf) ·
+[diagrams and speaker notes](design/presentation/README.md) ·
+[implemented architecture and data flow](design/ARCHITECTURE_CURRENT.md).
 
 ## Architecture
 
-```
-┌──────────────────────────────────────────────────────────────────────┐
-│  Browser: dashboard (live failure rates · fault injection · chat ·   │
-│           tool trace · cost/latency KPIs)                            │
-└───────────────┬─────────────────────────────────┬────────────────────┘
-                │ REST                            │ REST
-┌───────────────▼───────────────┐   ┌─────────────▼──────────────────┐
-│  twin  (FastAPI, :8001)       │   │  copilot  (FastAPI, :8000)     │
-│  digital twin of 3 EOL        │◄──│  Claude + SDK tool runner      │
-│  stations, 2 variants         │   │  tools: search_docs (RAG)      │
-│  · measurements, verdicts     │   │         get_station_stats      │
-│  · fault injection: drift,    │   │         get_recent_results     │
-│    hall noise, bad lot        │   │         lookup_part (BOM/PCN)  │
-│  · SSE event stream           │   │         draft_8d_report        │
-└───────────────────────────────┘   │  guardrails · cost log · evals │
-                                    └─────────────┬──────────────────┘
-┌───────────────────────────────┐                 │ OpenTelemetry (OTLP)
-│  docs/  test spec, datasheets,│   ┌─────────────▼──────────────────┐
-│  FMEA, PCN, work instruction  │   │  jaeger  (:16686)              │
-│  → chunks → local embeddings  │   └────────────────────────────────┘
-│  → ChromaDB + BM25 (hybrid)   │
-└───────────────────────────────┘
-```
+![Implemented runtime architecture: browser, Twin service, Copilot service, external model and Jaeger](design/presentation/diagrams/03-laufzeitarchitektur.svg)
+
+The browser reads live results from the Twin and sends investigation requests to the Copilot API.
+The Copilot runs local tools, document retrieval and evidence checks, and calls the selected external model.
+Only the benchmark freezes one shared data snapshot per scenario; ordinary live tool calls query the evolving Twin.
 
 | Concern | Choice | Why |
 |---|---|---|
-| Agent loop | Anthropic SDK tool runner (`@beta_tool`) | ~40 lines, every line explainable; no framework between us and the API. The same loop written by hand is in `examples/hello_agent.py`. |
-| Model | `claude-opus-5-5` (agent), `claude-haiku-5-5` (eval judge) | adaptive thinking, strict tool schemas, prompt caching; a cheap judge for evals |
-| Provider switch | `LLM_PROVIDER=openai` → `gpt-5` / `gpt-5-mini` through the same tools and prompt | the loop is written by hand on chat completions (`OpenAICopilot`); shows that the design is not tied to one vendor. Prompt caching and SDK-level spans exist only on the Anthropic path. |
-| RAG | fastembed (multilingual MiniLM) + ChromaDB, fused with BM25 via RRF | embeddings for meaning (German questions over English docs), BM25 for exact tokens like `E-204`, `HB4821`; nothing leaves the machine except the question and the retrieved chunks |
-| Twin | FastAPI, in-memory, seeded RNG | deterministic enough to test, realistic enough to tell the story; replaceable by a real MES/test system behind the same REST contract |
-| Observability | OpenTelemetry → Jaeger; per-question JSONL metrics | the SDK emits spans on its own; one container for the UI; cost/latency/cache/citation KPIs without a SaaS |
-| Quality | pytest (no API key) + golden-set evals (tools → facts → LLM judge) | regressions in prompt or model are caught by a number, not by a feeling |
+| Agent loop | Anthropic SDK tool runner or explicit OpenAI loop | One agent; provider/model are configurable. The benchmark archive records the configuration actually used. |
+| Engineering | Four deterministic analysis tools plus five base tools | Validity, change detection, clustering and signal descriptors complement statistics, individual results, documents, BOM lookup and 8D drafting. |
+| RAG | Local BM25; optional fastembed + embedded Chroma; rank fusion | Exact identifiers and semantic retrieval. The selected context, including tool outputs, is sent to the model provider. |
+| Evidence checks | Reference matching; limited support checks | Provenance is distinct from diagnosis correctness; document support uses a keyword heuristic. |
+| Twin | FastAPI, in-memory, seeded RNG | Controlled synthetic cases. Real-system integration and validation remain future work. |
+| Observability | OpenTelemetry → Jaeger; per-question JSONL metrics | Trace investigation steps, latency, token usage and calculated cost. |
+| Quality | Offline pytest, golden-set evals, scenario benchmark | Shared scenario snapshots and archived reports; exploratory cases are reported separately. |
 
 ## Quick start
 

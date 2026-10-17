@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+  "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="1152pt" height="648pt" viewBox="0 0 1152 648" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <title>Der Datenfluss</title>
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:title>Der Datenfluss</dc:title>
+    <dc:date>2026-10-17T13:15:23.655243</dc:date>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Matplotlib v3.6.3, https://matplotlib.org/</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 648 
+L 1152 648 
+L 1152 0 
+L 0 0 
+z
+" style="fill: #fcfcfa"/>
+  </g>
+  <g id="axes_1">
+   <g id="line2d_1">
+    <path d="M 54 603.36 
+L 1098 603.36 
+" clip-path="url(#pee37701ae8)" style="fill: none; stroke: #d6d8d7; stroke-width: 0.8; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_2">
+    <path d="M 432 250.56 
+L 525.6 250.56 
+L 525.6 340.56 
+" clip-path="url(#pee37701ae8)" style="fill: none; stroke: #20252a; stroke-width: 2; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_3">
+    <path d="M 406.8 437.76 
+L 525.6 437.76 
+L 525.6 340.56 
+" clip-path="url(#pee37701ae8)" style="fill: none; stroke: #20252a; stroke-width: 2; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_4">
+    <path d="M 1000.8 293.76 
+L 1061.28 293.76 
+L 1080 312.48 
+L 1080 383.76 
+L 1000.8 383.76 
+L 1000.8 293.76 
+" clip-path="url(#pee37701ae8)" style="fill: none; stroke: #20252a; stroke-width: 2; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_5">
+    <path d="M 1061.28 293.76 
+L 1061.28 312.48 
+L 1080 312.48 
+" clip-path="url(#pee37701ae8)" style="fill: none; stroke: #20252a; stroke-width: 1.3; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_6">
+    <path d="M 1015.2 331.2 
+L 1065.6 331.2 
+" clip-path="url(#pee37701ae8)" style="fill: none; stroke: #747a7f; stroke-width: 1.2; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_7">
+    <path d="M 1015.2 347.04 
+L 1065.6 347.04 
+" clip-path="url(#pee37701ae8)" style="fill: none; stroke: #747a7f; stroke-width: 1.2; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_8">
+    <path d="M 1015.2 362.88 
+L 1065.6 362.88 
+" clip-path="url(#pee37701ae8)" style="fill: none; stroke: #747a7f; stroke-width: 1.2; stroke-linecap: square"/>
+   </g>
+   <g id="patch_2">
+    <path d="M 228.797974 250.56 
+Q 264.599448 250.56 298.164854 250.56 
+" clip-path="url(#pee37701ae8)" style="fill: none; stroke: #20252a; stroke-width: 2; stroke-linecap: round"/>
+    <path d="M 290.964854 246.96 
+L 298.164854 250.56 
+L 290.964854 254.16 
+L 290.964854 246.96 
+z
+" clip-path="url(#pee37701ae8)" style="fill: #20252a; stroke: #20252a; stroke-width: 2; stroke-linecap: round"/>
+   </g>
+   <g id="patch_3">
+    <path d="M 228.797974 437.76 
+Q 264.599448 437.76 298.164854 437.76 
+" clip-path="url(#pee37701ae8)" style="fill: none; stroke: #20252a; stroke-width: 2; stroke-linecap: round"/>
+    <path d="M 290.964854 434.16 
+L 298.164854 437.76 
+L 290.964854 441.36 
+L 290.964854 434.16 
+z
+" clip-path="url(#pee37701ae8)" style="fill: #20252a; stroke: #20252a; stroke-width: 2; stroke-linecap: round"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 527.596436 340.56 
+Q 565.19689 340.56 600.561276 340.56 
+" clip-path="url(#pee37701ae8)" style="fill: none; stroke: #20252a; stroke-width: 2; stroke-linecap: round"/>
+    <path d="M 593.361276 336.96 
+L 600.561276 340.56 
+L 593.361276 344.16 
+L 593.361276 336.96 
+z
+" clip-path="url(#pee37701ae8)" style="fill: #20252a; stroke: #20252a; stroke-width: 2; stroke-linecap: round"/>
+   </g>
+   <g id="patch_5">
+    <path d="M 669.6 277.2 
+C 686.403268 277.2 702.520581 283.876009 714.402286 295.757714 
+C 726.283991 307.639419 732.96 323.756732 732.96 340.56 
+C 732.96 357.363268 726.283991 373.480581 714.402286 385.362286 
+C 702.520581 397.243991 686.403268 403.92 669.6 403.92 
+C 652.796732 403.92 636.679419 397.243991 624.797714 385.362286 
+C 612.916009 373.480581 606.24 357.363268 606.24 340.56 
+C 606.24 323.756732 612.916009 307.639419 624.797714 295.757714 
+C 636.679419 283.876009 652.796732 277.2 669.6 277.2 
+z
+" clip-path="url(#pee37701ae8)" style="fill: #fcfcfa; stroke: #bb4c2b; stroke-width: 2.5; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_6">
+    <path d="M 736.40061 340.56 
+Q 761.398974 340.56 784.16127 340.56 
+" clip-path="url(#pee37701ae8)" style="fill: none; stroke: #bb4c2b; stroke-width: 2; stroke-linecap: round"/>
+    <path d="M 776.96127 336.96 
+L 784.16127 340.56 
+L 776.96127 344.16 
+L 776.96127 336.96 
+z
+" clip-path="url(#pee37701ae8)" style="fill: #bb4c2b; stroke: #bb4c2b; stroke-width: 2; stroke-linecap: round"/>
+   </g>
+   <g id="patch_7">
+    <path d="M 934.402368 340.56 
+Q 955.801823 340.56 974.96521 340.56 
+" clip-path="url(#pee37701ae8)" style="fill: none; stroke: #20252a; stroke-width: 2; stroke-linecap: round"/>
+    <path d="M 967.76521 336.96 
+L 974.96521 340.56 
+L 967.76521 344.16 
+L 967.76521 336.96 
+z
+" clip-path="url(#pee37701ae8)" style="fill: #20252a; stroke: #20252a; stroke-width: 2; stroke-linecap: round"/>
+   </g>
+   <g id="text_1">
+    <text style="fill: #20252a; font: 700 11px 'Liberation Sans'; text-anchor: start" x="54" y="33.171563" transform="rotate(-0 54 33.171563)">ECU COPILOT</text>
+   </g>
+   <g id="text_2">
+    <text style="fill: #747a7f; font: 11px 'Liberation Sans'; text-anchor: start" x="180" y="33.171563" transform="rotate(-0 180 33.171563)">Morteza Molaei</text>
+   </g>
+   <g id="text_3">
+    <text style="fill: #747a7f; font: 11px 'Liberation Sans'; text-anchor: end" x="1098" y="33.171563" transform="rotate(-0 1098 33.171563)">Daten</text>
+   </g>
+   <g id="text_4">
+    <text style="fill: #20252a; font: 700 39px 'Liberation Sans'; text-anchor: start" x="54" y="103.862813" transform="rotate(-0 54 103.862813)">Der Datenfluss</text>
+   </g>
+   <g id="text_5">
+    <text style="fill: #747a7f; font: 11px 'Liberation Sans'; text-anchor: start" x="54" y="623.571563" transform="rotate(-0 54 623.571563)">Prototyp / simulierte Daten</text>
+   </g>
+   <g id="text_6">
+    <text style="fill: #20252a; font: 18px 'Liberation Mono'; text-anchor: end" x="1098" y="625.044375" transform="rotate(-0 1098 625.044375)">04</text>
+   </g>
+   <g id="text_7">
+    <text style="fill: #20252a; font: 700 28px 'Liberation Sans'; text-anchor: start" x="57.6" y="250.69125" transform="rotate(-0 57.6 250.69125)">Messwerte</text>
+   </g>
+   <g id="text_8">
+    <text style="fill: #20252a; font: 700 28px 'Liberation Sans'; text-anchor: start" x="57.6" y="437.89125" transform="rotate(-0 57.6 437.89125)">Dokumente</text>
+   </g>
+   <g id="text_9">
+    <text style="fill: #20252a; font: 700 28px 'Liberation Sans'; text-anchor: start" x="316.8" y="250.69125" transform="rotate(-0 316.8 250.69125)">Analyse</text>
+   </g>
+   <g id="text_10">
+    <text style="fill: #747a7f; font: 17px 'Liberation Sans'; text-anchor: start" x="316.8" y="281.599687" transform="rotate(-0 316.8 281.599687)">Gültigkeit / Trend / Cluster</text>
+   </g>
+   <g id="text_11">
+    <text style="fill: #20252a; font: 700 28px 'Liberation Sans'; text-anchor: start" x="316.8" y="437.89125" transform="rotate(-0 316.8 437.89125)">Suche</text>
+   </g>
+   <g id="text_12">
+    <text style="fill: #747a7f; font: 18px 'Liberation Sans'; text-anchor: start" x="316.8" y="469.524375" transform="rotate(-0 316.8 469.524375)">Passende Abschnitte</text>
+   </g>
+   <g id="text_13">
+    <text style="fill: #bb4c2b; font: 700 31px 'Liberation Sans'; text-anchor: middle" x="669.6" y="344.889687" transform="rotate(-0 669.6 344.889687)">Agent</text>
+   </g>
+   <g id="text_14">
+    <text style="fill: #20252a; font: 700 25px 'Liberation Sans'" transform="translate(815.811719 327.717187)">Belege</text>
+    <text style="fill: #20252a; font: 700 25px 'Liberation Sans'" transform="translate(817.917187 353.305312)">prüfen</text>
+   </g>
+   <g id="text_15">
+    <text style="fill: #20252a; font: 24px 'Liberation Sans'; text-anchor: middle" x="1040.4" y="433.5525" transform="rotate(-0 1040.4 433.5525)">Report</text>
+   </g>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="pee37701ae8">
+   <rect x="0" y="0" width="1152" height="648"/>
+  </clipPath>
+ </defs>
+</svg>
