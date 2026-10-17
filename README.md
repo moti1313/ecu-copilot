@@ -121,7 +121,7 @@ All test data comes from the digital twin and the documents are synthetic; the U
 2. Quiescent current rises with temperature (~3 %/K). Variant B sits closer to its limit (330 µA typical
    vs 450 µA limit) than variant A (240 vs 350), so drift hits B first.
 3. The agent sees E-204 rising on station 2 / variant B, reads the mean temperature (>32 °C), finds §4.2
-   and FMEA item 11, and concludes *pseudo failure: fix the station, re-test, do not block units*.
+   and FMEA item 11, and concludes *test invalid: unit condition still open; correct the station and re-test under valid conditions*. Invalid test conditions never justify a release - a unit can be defective in addition.
 
 Two more faults are built in: hall noise (E-310 above 45 dB(A), spec §6.1) and a bad connector lot
 (E-120 clustered on lot L2439-07, FMEA item 7) - a *real* failure the agent must not explain away.
