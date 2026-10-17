@@ -19,6 +19,8 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
+from .consistency import ConsistencyFlag, check_consistency, summarize as summarize_consistency
+
 _CITE = re.compile(r"^\s*([A-Z][A-Z0-9-]+?)\s*(?:Rev\.?\s*([A-Z0-9]+))?\s*(?:§\s*|item\s+|section\s+)?([0-9][0-9.]*)?\s*$", re.I)
 _PATH_STEP = re.compile(r"^([A-Za-z0-9_\- ]+)(?:\[(.*)\])?$")
 _TOKEN = re.compile(r"[A-Za-z0-9äöüÄÖÜß][A-Za-z0-9äöüÄÖÜß\-\.]{3,}|\d+(?:[.,]\d+)?")
@@ -36,6 +38,7 @@ class ItemVerdict:
 @dataclass
 class Verification:
     items: list[ItemVerdict] = field(default_factory=list)
+    consistency: list[ConsistencyFlag] = field(default_factory=list)  # CONCEPT §11 - marks, never corrections
 
     def summary(self) -> dict:
         live = [i for i in self.items if i.source_type == "live"]
@@ -50,7 +53,8 @@ class Verification:
             "support": {"live": rate(live, "support", {"supported"}), "docs": rate(docs, "support", {"supported"})},
             "flags": [f"evidence {i.index + 1}: {i.provenance}" for i in self.items if i.provenance != "verified"],
             "items": [i.__dict__ for i in self.items],
-            "method": "provenance: ref vs tool outputs / doc index; support: spec comparison (live), keyword overlap (docs)",
+            "consistency": summarize_consistency(self.consistency),
+            "method": "provenance: ref vs tool outputs / doc index; support: spec comparison (live), keyword overlap (docs); consistency: CONCEPT §11",
         }
 
 
@@ -243,6 +247,7 @@ def verify_report(report: dict | None, tool_calls: list, chunks: list, spec: dic
     ver = Verification()
     if not report:
         return ver
+    ver.consistency = check_consistency(report, tool_calls)
     for i, ev in enumerate(report.get("evidence") or []):
         ref = ev.get("ref") or {}
         st = ev.get("source_type")

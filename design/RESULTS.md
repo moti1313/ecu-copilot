@@ -222,3 +222,16 @@ Zusatzbehauptungen im Detail:
 **Archivnotiz:** `code.dirty=true`; der getrackte Anwendungs-/Eval-Code im heutigen Arbeitsverzeichnis entspricht dem archivierten Commit `d8ef3bd`, ein damaliger Dirty-Diff ist nicht archiviert. Die Latenzen, Wartezeiten, Snapshots und Dateizeit ergeben rund zwei Stunden (09:08–11:08 UTC, 11:08–13:08 Uhr Berlin). Berechnete Gesamtkosten aller 60 Läufe: 5,06212 USD.
 
 **Abschluss:** Die Prüfphase wird mit dem negativen Funktionskriterium abgeschlossen. Ein neuer bezahlter Lauf wird daraus nicht abgeleitet. Als mögliche spätere Verbesserung ist zuerst eine Konsistenzprüfung der Endbewertung sinnvoll; ein Re-Test derselben Einheit bleibt eine getrennte Erweiterung.
+
+### Konsistenz-Replay über Lauf 4 – 17.10.2026, abends (offline, keine Modellaufrufe, Quoten unverändert)
+
+Neue Verifier-Stufe nach `CONCEPT.md` §11 (`copilot/consistency.py`, Marken K0–K4), per `evals/consistency_replay.py` über die 60 archivierten Läufe gelegt. Sie ändert keinen Report, keinen Befund und keine Quote dieser Tabelle; sie macht nur sichtbar, wo Festlegungen unbelegt oder widersprüchlich sind bzw. welche Prüfung nicht ausgeführt wurde.
+
+| System | S01 | S04 | S05 | S08 | S08w (E) |
+|---|---|---|---|---|---|
+| B0 | – | – | – | – | – |
+| B1 | – | – | – | – | – |
+| V1S | K0 3/3 | – | K0 3/3 | K0 3/3 · K4 3/3 · K3 1/3 | K0 3/3 · K4 3/3 |
+| V2 | – | – | **K1 3/3 · K2 3/3 · K3 3/3** | K4 3/3 | K4 2/3 |
+
+Lesehilfe: K0 = Sensorplausibilität (`describe_signal`) nicht ausgeführt (Abdeckung); K1 = Temperaturmessung in Zweifel, Übertemperatur nicht unabhängig belegt (Widerspruch); K2 = Stationsursache mit Bauteilverdacht in einer Bewertung (Prüfhinweis); K3 = konkurrierende Festlegungen im identischen Geltungsbereich (Prüfhinweis, kann berechtigter Mehrfachfehler sein); K4 = stationsübergreifender Losvergleich fehlt (Abdeckung). Zahlen = Läufe mit dieser Marke von 3. Der S05-Fehler von V2 wird damit in allen drei Wiederholungen automatisch sichtbar; auf S08 trifft K4 alle drei V2-Wiederholungen, obwohl r0 und r2 „exakt" waren – Abdeckungsmarke, kein Fehlerurteil. Einzelheiten und Abweichungen von der Vorab-Erwartung: `CONCEPT.md` §11, Replay-Befund.
