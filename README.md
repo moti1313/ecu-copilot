@@ -35,7 +35,7 @@ Only the benchmark freezes one shared data snapshot per scenario; ordinary live 
 ## Quick start
 
 ```bash
-cp .env.example .env            # put your ANTHROPIC_API_KEY in .env
+cp .env.example .env            # OPENAI_API_KEY (all benchmark results below) or ANTHROPIC_API_KEY; set LLM_PROVIDER
 docker compose up --build       # first start downloads the embedding model (~250 MB) into a volume
 ```
 
@@ -128,7 +128,7 @@ Two more faults are built in: hall noise (E-310 above 45 dB(A), spec §6.1) and 
 
 ## Production notes (what would change at a real site)
 
-- **Data sources:** the twin becomes an adapter to the MES / test-station database; the five tools keep their
+- **Data sources:** the twin becomes an adapter to the MES / test-station database; the nine tools keep their
   schema. Events would come from Kafka instead of SSE.
 - **Deployment:** the compose file maps 1:1 to two Deployments, a Service each, a Secret for the key and an
   OTLP collector; the embedding model lives in an image layer or a PVC.
@@ -146,7 +146,27 @@ src/ecu_copilot/
   rag/                 chunking.py · index.py (Chroma + BM25, RRF) · ingest.py (CLI)
   copilot/             tools.py · agent.py · api.py · telemetry.py · metrics.py · static/index.html
 docs/                  six engineering documents (synthetic, consistent limits) + BOM-DCU.json
-evals/                 golden.json · run.py
-tests/                 25 tests, fake LLM client
+evals/                 bench.py (scenario benchmark) · baselines.py (B0 rule engine, B1 single-call RAG) · rescore.py · scenarios/ · golden.json · run.py
+tests/                 67 tests, fake LLM client, no API key
 examples/hello_agent.py   the agent loop written by hand (day-1 version)
 ```
+
+## Benchmark results (run 4, 2026-10-17) - the honest version
+
+Pre-registered run (`design/CONCEPT.md` §10): four regular scenarios with known truth (temperature drift,
+no fault, faulty T1 sensor, drift + bad connector lot), frozen twin snapshot per scenario, 3 repeats,
+systems B0 (rule engine on the same engineering tools), B1 (single-call RAG), V1S (V1 tools + V2 schema),
+V2 (engineering tools + verified evidence). Model gpt-5. Details: `design/RESULTS.md`, `design/RUN4_REVIEW.md`.
+
+| System | Exact assessments (regular, 12 runs) | Notes |
+|---|---|---|
+| B0 rule engine | **12/12** | 0 s, 0 $ |
+| V2 agent | 8/12 | S01 3/3, S04 3/3 (abstained correctly, no detector false alarm), **S05 0/3** (named the sensor fault but also fixed "overtemperature" as a cause - a contradictory final assessment), S08 2/3 |
+| V1S | 5/12 | the report format alone explains most of V1 -> V2 |
+| B1 chatbot | 0/12 | |
+
+What this shows: for known failure patterns the rule engine is better than the agent. The agent produces
+traceable evidence (run 4, V2: 155/165 live references and 47/47 document references automatically
+resolvable - this confirms the references, not the diagnosis) and proposes counter-checks; its additional
+practical value for cases outside the rule set remains to be measured. Next improvement: the verifier flags
+contradictory or unsupported final assessments (it does not substitute a cause).
