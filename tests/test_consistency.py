@@ -14,17 +14,30 @@ ARCHIVE = Path(__file__).resolve().parents[1] / "data/evals/bench-20261017-09081
 
 
 def _a(station=2, variant="B", lot=None, validity="valid", defect="none", cause="none"):
-    return {"scope": {"station": station, "variant": variant, "lot": lot}, "test_validity": validity, "defect_indication": defect, "root_cause": cause}
+    return {
+        "scope": {"station": station, "variant": variant, "lot": lot},
+        "test_validity": validity,
+        "defect_indication": defect,
+        "root_cause": cause,
+    }
 
 
 def _describe(relation="iq_follows_t1", station=2, variant="B"):
-    out = {"scope": {"station": station, "variant": variant, "window_minutes": 20}, "iq_t1_relation": relation, "iq_t1_correlation": 0.02 if relation == "decoupled" else 0.9}
+    out = {
+        "scope": {"station": station, "variant": variant, "window_minutes": 20},
+        "iq_t1_relation": relation,
+        "iq_t1_correlation": 0.02 if relation == "decoupled" else 0.9,
+    }
     return ToolCall(name="describe_signal", input={"station": station, "variant": variant, "minutes": 20}, output=json.dumps(out))
 
 
 def _cluster(station=None, variant="B", lot="L2439-07", code="E-120", error=False):
     out = {"error": "boom"} if error else {"by": "lot", "code": code, "concentrated": True, "top": {"group": lot}}
-    return ToolCall(name="cluster_failures", input={"station": station, "variant": variant, "by": "lot", "code": code, "minutes": 30}, output=json.dumps(out))
+    return ToolCall(
+        name="cluster_failures",
+        input={"station": station, "variant": variant, "by": "lot", "code": code, "minutes": 30},
+        output=json.dumps(out),
+    )
 
 
 def codes(flags):
@@ -33,7 +46,12 @@ def codes(flags):
 
 # --- S05 pattern: the documented failure --------------------------------------------------------
 def test_s05_pattern_gives_k1_and_k3_and_leaves_finding_unchanged():
-    report = {"assessments": [_a(validity="invalid_temperature", defect="none_assessable", cause="station_temperature"), _a(validity="unknown", defect="suspected", cause="sensor_t1")]}
+    report = {
+        "assessments": [
+            _a(validity="invalid_temperature", defect="none_assessable", cause="station_temperature"),
+            _a(validity="unknown", defect="suspected", cause="sensor_t1"),
+        ]
+    }
     flags = check_consistency(report, [_describe("decoupled")])
     # K2 as well: the second assessment claims a station cause (sensor_t1) as a defect indication (suspected)
     assert codes(flags) == ["K1", "K2", "K3"]
@@ -72,10 +90,20 @@ def test_k2_station_cause_with_defect_claim():
 
 def test_k3_only_on_identical_scope_not_on_nested_lot_scope():
     # S08 pattern: invalid temperature for station 2/B (all lots) plus a lot-scoped defect - legitimate, no K3
-    s08 = {"assessments": [_a(validity="invalid_temperature", defect="none_assessable", cause="station_temperature"), _a(lot="L2439-07", validity="valid", defect="strong", cause="connector_lot")]}
+    s08 = {
+        "assessments": [
+            _a(validity="invalid_temperature", defect="none_assessable", cause="station_temperature"),
+            _a(lot="L2439-07", validity="valid", defect="strong", cause="connector_lot"),
+        ]
+    }
     assert "K3" not in codes(check_consistency(s08, [_describe(), _cluster()]))
     # identical scope with a competing defect claim -> K3 (hint, may be a justified multi-fault)
-    same = {"assessments": [_a(validity="invalid_temperature", defect="none_assessable", cause="station_temperature"), _a(validity="valid", defect="suspected", cause="component_u7")]}
+    same = {
+        "assessments": [
+            _a(validity="invalid_temperature", defect="none_assessable", cause="station_temperature"),
+            _a(validity="valid", defect="suspected", cause="component_u7"),
+        ]
+    }
     flags = check_consistency(same, [_describe()])
     assert codes(flags) == ["K3"] and flags[0].assessments == [0, 1] and "Mehrfachfehler" in flags[0].text
 

@@ -45,6 +45,10 @@ class ConsistencyFlag:
 
 
 # ---------------------------------------------------------------------------------------------
+def _triple(a: dict) -> str:
+    return f"{a.get('test_validity')}/{a.get('defect_indication')}/{a.get('root_cause')}"
+
+
 def _scope(a: dict) -> tuple[str | None, str | None, str | None]:
     s = a.get("scope") or {}
     norm = lambda v: None if v in (None, "", "null") else str(v).strip().upper()  # noqa: E731
@@ -102,7 +106,11 @@ def check_consistency(report: dict | None, tool_calls: list) -> list[Consistency
         if validity == "invalid_temperature":
             described = _describe_for(a, tool_calls)
             if not described:
-                flags.append(ConsistencyFlag("K0", KINDS["K0"], [i], TEXTS["K0"], "describe_signal wurde für diesen Geltungsbereich nicht erfolgreich ausgeführt"))
+                flags.append(
+                    ConsistencyFlag(
+                        "K0", KINDS["K0"], [i], TEXTS["K0"], "describe_signal wurde für diesen Geltungsbereich nicht erfolgreich ausgeführt"
+                    )
+                )
             else:
                 decoupled = [d for d in described if str(d.get("iq_t1_relation") or "") == "decoupled"]
                 same_scope_sensor = [
@@ -130,7 +138,13 @@ def check_consistency(report: dict | None, tool_calls: list) -> list[Consistency
             ]
             if not cross:
                 flags.append(
-                    ConsistencyFlag("K4", KINDS["K4"], [i], TEXTS["K4"], f"kein erfolgreicher cluster_failures-Aufruf ohne Stationsfilter für Los {lot or '?'} / Variante {var or 'alle'}")
+                    ConsistencyFlag(
+                        "K4",
+                        KINDS["K4"],
+                        [i],
+                        TEXTS["K4"],
+                        f"kein erfolgreicher cluster_failures-Aufruf ohne Stationsfilter für Los {lot or '?'} / Variante {var or 'alle'}",
+                    )
                 )
 
     # K3: identical scope tuple, one invalid_*, the other suspected/strong
@@ -146,7 +160,7 @@ def check_consistency(report: dict | None, tool_calls: list) -> list[Consistency
                     KINDS["K3"],
                     sorted([i, j]),
                     TEXTS["K3"],
-                    f"Bewertung {i + 1}: {a.get('test_validity')}/{a.get('defect_indication')}/{a.get('root_cause')} · Bewertung {j + 1}: {b.get('test_validity')}/{b.get('defect_indication')}/{b.get('root_cause')}",
+                    f"Bewertung {i + 1}: {_triple(a)} · Bewertung {j + 1}: {_triple(b)}",
                 )
             )
     # de-duplicate K3 pairs (i,j) and (j,i) can only arise if both are invalid and suspected - keep first
@@ -164,5 +178,8 @@ def summarize(flags: list[ConsistencyFlag]) -> dict:
     return {
         "count": len(flags),
         "flags": [f.as_dict() for f in flags],
-        "method": "CONCEPT §11: K0/K4 Abdeckung, K1 Widerspruch, K2/K3 Prüfhinweis; nur gespeicherte Werkzeugaufrufe; Befund und Bewertungen unverändert",
+        "method": (
+            "CONCEPT §11: K0/K4 Abdeckung, K1 Widerspruch, K2/K3 Prüfhinweis; "
+            "nur gespeicherte Werkzeugaufrufe; Befund und Bewertungen unverändert"
+        ),
     }

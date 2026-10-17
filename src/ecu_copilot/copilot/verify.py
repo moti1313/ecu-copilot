@@ -19,7 +19,8 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
-from .consistency import ConsistencyFlag, check_consistency, summarize as summarize_consistency
+from .consistency import ConsistencyFlag, check_consistency
+from .consistency import summarize as summarize_consistency
 
 _CITE = re.compile(r"^\s*([A-Z][A-Z0-9-]+?)\s*(?:Rev\.?\s*([A-Z0-9]+))?\s*(?:§\s*|item\s+|section\s+)?([0-9][0-9.]*)?\s*$", re.I)
 _PATH_STEP = re.compile(r"^([A-Za-z0-9_\- ]+)(?:\[(.*)\])?$")
@@ -54,7 +55,10 @@ class Verification:
             "flags": [f"evidence {i.index + 1}: {i.provenance}" for i in self.items if i.provenance != "verified"],
             "items": [i.__dict__ for i in self.items],
             "consistency": summarize_consistency(self.consistency),
-            "method": "provenance: ref vs tool outputs / doc index; support: spec comparison (live), keyword overlap (docs); consistency: CONCEPT §11",
+            "method": (
+                "provenance: ref vs tool outputs / doc index; support: spec comparison (live), keyword overlap (docs); "
+                "consistency: CONCEPT §11"
+            ),
         }
 
 
