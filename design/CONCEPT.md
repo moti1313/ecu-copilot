@@ -204,3 +204,22 @@ Festgelegt **vor** dem ersten Aufruf; Änderungen danach werden als solche dokum
 **Ergebnis (17.10.2026, 21:17 UTC, nach Freigabe):** 15 Anfragen, 0,006 USD. Q1 12/15 (S01 0/3: Referenzfühler statt Wiederholung bei echter Drift; S08/S08w: Wiederholung statt Losvergleich, zulässig), Q2 15/15, Q3 15/15, 0 unentschieden. Erfolgsmaß erreicht, Q1 genau an der Schwelle: ein Hinweis, kein Nachweis. Die feste Regel (c) trifft 15/15. Einzelheiten und Grenzen: `RESULTS.md`, Abschnitt Jev-Schattenexperiment. Nächster Schritt nach §12 wären die zurückgehaltenen Prüffälle; nicht gestartet.
 
 **Umsetzung ohne Aufruf (17.10.2026):** `copilot/jev.py` (Zustandsaufbau, Fragen, HTTP-Client mit austauschbarem Transport, Protokoll, Erwartungstabelle), `tests/test_jev.py` (Attrappe über `httpx.MockTransport`, kein Netz, kein Schlüssel), `evals/jev_shadow.py` (Standard `--dry-run`: baut Zustände und zeigt Größen; sendet nur mit `--send`).
+
+## 13. Ausblick: einmalige gezielte Überarbeitung aus den Konsistenz-Marken (Konzept, Stand 17.10.2026; nicht gestartet)
+
+Kein Code, kein Lauf. Dieser Abschnitt beschreibt den nächsten Versuch, damit er in der Präsentation benannt werden kann, ohne eine Wirkung zu behaupten.
+
+**Ablauf.** Antwort → Konsistenzprüfung (§11) → bei Marke **eine** gezielte Überarbeitung → erneute Prüfung → beide Fassungen gespeichert. Die Rückmeldung an das Modell wird **aus den Marken erzeugt**, nicht frei formuliert (z. B. K1: „Du stellst Übertemperatur fest und bezweifelst zugleich den Temperatursensor. Prüfe, welche Festlegung belegt ist; trenne alternative Erklärungen von gleichzeitig belegten Ursachen." · K4: „Die Losbewertung stützt sich nur auf Station 2; der stationsübergreifende Vergleich fehlt."). Das ist gezielte Kritik aus einer deterministischen Quelle, keine allgemeine Selbstkritik.
+
+**Präzisierungen (Review 17.10.).**
+1. **S05 braucht mehr als Umformulieren.** Die Überarbeitung muss die strukturierten Felder `assessments` ändern dürfen und wird daran gemessen. Eine vorsichtigere Erklärung bei unverändert widersprüchlichen Bewertungen gilt als **nicht behoben**. Die tatsächliche Temperatur bleibt bis zu einer unabhängigen Messung offen; die richtige Überarbeitung ist `unknown / none / sensor_t1`, nicht eine neue Festlegung.
+2. **Zusätzliche Werkzeugaufrufe nur auf dem eingefrorenen Datenstand.** Für K4 muss der Agent `cluster_failures` stationsübergreifend nachholen können; diese Aufrufe laufen gegen den archivierten Snapshot desselben Laufs, nie gegen den laufenden Twin. Sonst wäre eine bessere zweite Antwort durch neue Messdaten erklärbar und der Effekt der Überarbeitung nicht trennbar.
+3. **Der kleine Vorversuch ist ein archivbasierter Modellversuch mit bezahlten Aufrufen.** Er braucht keinen Twin, aber Festlegung und Freigabe. Die drei S05/V2-Fehlerberichte zeigen nur, ob die Schleife den bekannten Fehler behebt; ob sie **richtige Antworten verschlechtert**, zeigen erst ursprünglich korrekte Fälle (S01/V2, S04/V2, S08/B0-ähnliche Reports mit berechtigtem Mehrfachfehler, der K3-Hinweise tragen darf).
+
+**Metriken, getrennt ausgewiesen.** Erste Antwort exakt · zweite Antwort exakt · Fehler behoben (erste nicht exakt, zweite exakt) · **richtige Antwort verschlechtert** (erste exakt, zweite nicht) · Marken vor/nach (informativ). „Weniger Marken" allein ist kein Erfolg; berechtigte Mehrfachfehler dürfen weiterhin K3 tragen, „keine Marke" ist kein Beweis für eine richtige Diagnose.
+
+**Stufen.** (a) Konzept (dieser Abschnitt). (b) Vorversuch offline-archiviert: 3 S05-Fehlerberichte + ≥ 6 korrekte Berichte, eine Überarbeitungsrunde je Bericht, gpt-5 wie Lauf 4, geschätzt ≈ 0,5 USD; eigene Festlegung wie §10/§12 vor dem ersten Aufruf. (c) Erst bei positivem und nicht verschlechterndem Vorversuch ein Lauf 5 mit der Schleife im Agenten, eigene Festlegung, kostenloser Probelauf, Vergleich gegen Lauf 4 auf denselben Szenarien.
+
+**Nicht-Ziele.** Keine automatische Übernahme der zweiten Antwort ohne Anzeige beider Fassungen. Keine Behauptung einer Verbesserung vor Stufe (c). Nicht vor der Präsentation.
+
+**Satz für die Präsentation.** „Als nächsten Schritt würde ich die deterministischen Hinweise für eine einmalige Überarbeitung nutzen. Dabei messe ich Verbesserungen und Verschlechterungen getrennt. Bisher zeigt mein Prototyp die Widersprüche an; die Wirkung dieser Überarbeitung ist noch offen."
