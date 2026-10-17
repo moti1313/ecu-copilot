@@ -127,3 +127,83 @@ Je Szenario: abgeschlossen / Befund korrekt / Bewertungen exakt (über Wiederhol
 | S08w-drift-and-bad-lot-weak (E) | 1 / 1 / 1 von 1 |
 
 Lesehilfe: *regulär* = Lösbarkeit erfüllt und nicht explorativ; nur diese Läufe bilden die Gesamtquoten. *Abschluss* = auswertbarer Report ohne Fehler; *Diagnose-Konsistenz* = Mehrheitsanteil nur über abgeschlossene Läufe; *Zurückhaltung ok* = 'unklar' genau dann, wenn die Wahrheit es verlangt; *Herkunft live* n/a für Systeme ohne Referenzen (V1-Schema). *Herkunft* heißt: Die automatische Prüfung konnte die angegebene Quelle bzw. den referenzierten Wert nachvollziehen – nicht, dass die Aussage oder Diagnose richtig ist. *Stützung Dok* ist eine Schlüsselwort-Heuristik. *Zusatz-Behaupt.* = Bewertungen, die keiner Wahrheits-Gruppe entsprechen und eine Ursache behaupten; *Bewertungen exakt* = alle erwarteten gefunden und keine Zusatzbehauptung. B0 kennt die Szenario-Scope-Angabe (Station/Variante) aus der Szenariodefinition, nicht aus der Frage.
+
+## 2026-10-16 20:55 UTC · Modell gpt-5 · max_tokens 24000 · Szenarien S01-temperature-drift, S04-no-fault, S05-sensor-offset, S08-drift-and-bad-lot, S08w-drift-and-bad-lot-weak · 5 Läufe (4 regulär, 1 explorativ) · eingefrorener Datenstand je Szenario
+
+**Reguläre Szenarien (Lösbarkeit erfüllt, nicht explorativ) – Gesamtquoten** (S01-temperature-drift, S04-no-fault, S05-sensor-offset, S08-drift-and-bad-lot, 4 Läufe)
+
+| System | Abschluss | Befund korrekt | Bewertungen korrekt | Ursache | Zusatz-Behaupt. Ø | Bewertungen exakt | Zurückhaltung ok | Pflicht-Tools | Zitat vorh. | Herkunft live | Herkunft Dok | Stützung Dok | Nächster Test | Diagnose-Konsistenz | Ø s | Ø $ |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| B0 | 100 % | 100 % | 100 % | 100 % | 0.00 | 100 % | 100 % | 75 % | 100 % | 100 % (6/6) | 100 % (5/5) | 40 % (2/5) | 75 % | n/a | 0.0 | 0.000 |
+
+**Explorative Läufe (als explorativ markiert oder Lösbarkeit nicht erfüllt) – separat, nicht in der Gesamtquote** (S08w-drift-and-bad-lot-weak, 1 Läufe)
+
+| System | Abschluss | Befund korrekt | Bewertungen korrekt | Ursache | Zusatz-Behaupt. Ø | Bewertungen exakt | Zurückhaltung ok | Pflicht-Tools | Zitat vorh. | Herkunft live | Herkunft Dok | Stützung Dok | Nächster Test | Diagnose-Konsistenz | Ø s | Ø $ |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| B0 | 100 % | 100 % | 100 % | 100 % | 0.00 | 100 % | 100 % | 100 % | 100 % | 100 % (3/3) | 100 % (2/2) | 0 % (0/2) | 100 % | n/a | 0.0 | 0.000 |
+
+Je Szenario: abgeschlossen / Befund korrekt / Bewertungen exakt (über Wiederholungen); (E) = explorativ:
+
+| Szenario | B0 |
+|---|---|
+| S01-temperature-drift | 1 / 1 / 1 von 1 |
+| S04-no-fault · Detektor-Fehlalarm auf unveränderter Linie: nein | 1 / 1 / 1 von 1 |
+| S05-sensor-offset | 1 / 1 / 1 von 1 |
+| S08-drift-and-bad-lot | 1 / 1 / 1 von 1 |
+| S08w-drift-and-bad-lot-weak (E) | 1 / 1 / 1 von 1 |
+
+Lesehilfe: *regulär* = Lösbarkeit erfüllt und nicht explorativ; nur diese Läufe bilden die Gesamtquoten. *Abschluss* = auswertbarer Report ohne Fehler; *Diagnose-Konsistenz* = Mehrheitsanteil nur über abgeschlossene Läufe; *Zurückhaltung ok* = 'unklar' genau dann, wenn die Wahrheit es verlangt; *Herkunft live* n/a für Systeme ohne Referenzen (V1-Schema). *Herkunft* heißt: Die automatische Prüfung konnte die angegebene Quelle bzw. den referenzierten Wert nachvollziehen – nicht, dass die Aussage oder Diagnose richtig ist. *Stützung Dok* ist eine Schlüsselwort-Heuristik. *Zusatz-Behaupt.* = Bewertungen, die keiner Wahrheits-Gruppe entsprechen und eine Ursache behaupten; *Bewertungen exakt* = alle erwarteten gefunden und keine Zusatzbehauptung. B0 kennt die Szenario-Scope-Angabe (Station/Variante) aus der Szenariodefinition, nicht aus der Frage.
+
+## 2026-10-17 09:08 UTC · Modell gpt-5 · max_tokens 24000 · Szenarien S01-temperature-drift, S04-no-fault, S05-sensor-offset, S08-drift-and-bad-lot, S08w-drift-and-bad-lot-weak · 60 Läufe (48 regulär, 12 explorativ) · eingefrorener Datenstand je Szenario
+
+**Reguläre Szenarien (Lösbarkeit erfüllt, nicht explorativ) – Gesamtquoten** (S01-temperature-drift, S04-no-fault, S05-sensor-offset, S08-drift-and-bad-lot, 48 Läufe)
+
+| System | Abschluss | Befund korrekt | Bewertungen korrekt | Ursache | Zusatz-Behaupt. Ø | Bewertungen exakt | Zurückhaltung ok | Pflicht-Tools | Zitat vorh. | Herkunft live | Herkunft Dok | Stützung Dok | Nächster Test | Diagnose-Konsistenz | Ø s | Ø $ |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| B0 | 100 % | 100 % | 100 % | 100 % | 0.00 | 100 % | 100 % | 75 % | 100 % | 100 % (18/18) | 100 % (15/15) | 40 % (6/15) | 75 % | 100 % | 0.0 | 0.000 |
+| B1 | 100 % | 0 % | 0 % | 0 % | 0.00 | 0 % | 42 % | 25 % | 75 % | n/a | 93 % (51/55) | 18 % (10/55) | 67 % | 92 % | 85.1 | 0.062 |
+| V1S | 100 % | 67 % | 42 % | 67 % | 0.50 | 42 % | 67 % | 25 % | 92 % | 90 % (158/175) | 100 % (61/61) | 56 % (34/61) | 100 % | 92 % | 159.8 | 0.129 |
+| V2 | 100 % | 75 % | 67 % | 100 % | 0.25 | 67 % | 75 % | 100 % | 100 % | 94 % (155/165) | 100 % (47/47) | 64 % (30/47) | 100 % | 100 % | 155.8 | 0.124 |
+
+**Explorative Läufe (als explorativ markiert oder Lösbarkeit nicht erfüllt) – separat, nicht in der Gesamtquote** (S08w-drift-and-bad-lot-weak, 12 Läufe)
+
+| System | Abschluss | Befund korrekt | Bewertungen korrekt | Ursache | Zusatz-Behaupt. Ø | Bewertungen exakt | Zurückhaltung ok | Pflicht-Tools | Zitat vorh. | Herkunft live | Herkunft Dok | Stützung Dok | Nächster Test | Diagnose-Konsistenz | Ø s | Ø $ |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| B0 | 100 % | 100 % | 100 % | 100 % | 0.00 | 100 % | 100 % | 100 % | 100 % | 100 % (9/9) | 100 % (6/6) | 0 % (0/6) | 100 % | 100 % | 0.0 | 0.000 |
+| B1 | 100 % | 0 % | 0 % | 0 % | 0.00 | 0 % | 33 % | 0 % | 100 % | n/a | 86 % (12/14) | 14 % (2/14) | 33 % | 67 % | 135.1 | 0.083 |
+| V1S | 100 % | 100 % | 0 % | 100 % | 0.00 | 0 % | 100 % | 0 % | 100 % | 100 % (56/56) | 100 % (17/17) | 53 % (9/17) | 100 % | 100 % | 192.7 | 0.193 |
+| V2 | 100 % | 100 % | 100 % | 100 % | 0.00 | 100 % | 100 % | 100 % | 100 % | 100 % (54/54) | 100 % (16/16) | 50 % (8/16) | 100 % | 100 % | 171.8 | 0.149 |
+
+Je Szenario: abgeschlossen / Befund korrekt / Bewertungen exakt (über Wiederholungen); (E) = explorativ:
+
+| Szenario | B0 | B1 | V1S | V2 |
+|---|---|---|---|---|
+| S01-temperature-drift | 3 / 3 / 3 von 3 | 3 / 0 / 0 von 3 | 3 / 3 / 3 von 3 | 3 / 3 / 3 von 3 |
+| S04-no-fault · Detektor-Fehlalarm auf unveränderter Linie: nein | 3 / 3 / 3 von 3 | 3 / 0 / 0 von 3 | 3 / 2 / 2 von 3 | 3 / 3 / 3 von 3 |
+| S05-sensor-offset | 3 / 3 / 3 von 3 | 3 / 0 / 0 von 3 | 3 / 0 / 0 von 3 | 3 / 0 / 0 von 3 |
+| S08-drift-and-bad-lot | 3 / 3 / 3 von 3 | 3 / 0 / 0 von 3 | 3 / 3 / 0 von 3 | 3 / 3 / 2 von 3 |
+| S08w-drift-and-bad-lot-weak (E) | 3 / 3 / 3 von 3 | 3 / 0 / 0 von 3 | 3 / 3 / 0 von 3 | 3 / 3 / 3 von 3 |
+
+Lesehilfe: *regulär* = Lösbarkeit erfüllt und nicht explorativ; nur diese Läufe bilden die Gesamtquoten. *Abschluss* = auswertbarer Report ohne Fehler; *Diagnose-Konsistenz* = Mehrheitsanteil nur über abgeschlossene Läufe; *Zurückhaltung ok* = 'unklar' genau dann, wenn die Wahrheit es verlangt; *Herkunft live* n/a für Systeme ohne Referenzen (V1-Schema). *Herkunft* heißt: Die automatische Prüfung konnte die angegebene Quelle bzw. den referenzierten Wert nachvollziehen – nicht, dass die Aussage oder Diagnose richtig ist. *Stützung Dok* ist eine Schlüsselwort-Heuristik. *Zusatz-Behaupt.* = Bewertungen, die keiner Wahrheits-Gruppe entsprechen und eine Ursache behaupten; *Bewertungen exakt* = alle erwarteten gefunden und keine Zusatzbehauptung. B0 kennt die Szenario-Scope-Angabe (Station/Variante) aus der Szenariodefinition, nicht aus der Frage. *Pflicht-Tools* beschreibt die Werkzeugnutzung des Agenten (wurden die für das Szenario erwarteten Werkzeuge aufgerufen), nicht die Diagnosequalität; für B0, das direkt die Ingenieurfunktionen aufruft, ist die Quote strukturell bedingt (z. B. 75 %, weil S04 `get_station_stats` erwartet) und keine Aussage über seine Bewertungen.
+
+Nachträgliche Auswertung Lauf 4 (`evals/rescore.py`, regulär = 48 Läufe):
+
+| System | Bewertungen gefunden | Zusatz-Behaupt. Ø | Läufe mit Zusatzbehauptung | Bewertungen exakt | Befund korrekt |
+|---|---|---|---|---|---|
+| B0 | 100 % | 0.00 | 0/12 | 100 % | 100 % |
+| B1 | 0 % | 0.00 | 0/12 | 0 % | 0 % |
+| V1S | 42 % | 0.50 | 6/12 | 42 % | 67 % |
+| V2 | 67 % | 0.25 | 3/12 | 67 % | 75 % |
+
+Zusatzbehauptungen im Detail:
+- v1s/S04-no-fault/r0: {'station': 2, 'variant': 'B', 'lot': None} valid/suspected/unknown
+- v1s/S05-sensor-offset/r0: {'station': 2, 'variant': 'B', 'lot': None} invalid_temperature/none_assessable/station_temperature
+- v1s/S05-sensor-offset/r1: {'station': 2, 'variant': 'B', 'lot': None} invalid_temperature/none_assessable/station_temperature
+- v1s/S05-sensor-offset/r2: {'station': 2, 'variant': 'B', 'lot': None} invalid_temperature/none_assessable/station_temperature
+- v2/S05-sensor-offset/r0: {'station': 2, 'variant': 'B', 'lot': None} invalid_temperature/none_assessable/station_temperature
+- v2/S05-sensor-offset/r1: {'station': 2, 'variant': 'B', 'lot': None} invalid_temperature/none_assessable/station_temperature
+- v2/S05-sensor-offset/r2: {'station': 2, 'variant': 'B', 'lot': None} invalid_temperature/none_assessable/station_temperature
+- v1s/S08-drift-and-bad-lot/r0: {'station': 2, 'variant': 'B', 'lot': 'L2441-03'} valid/suspected/connector_lot
+- v1s/S08-drift-and-bad-lot/r2: {'station': 2, 'variant': 'B', 'lot': None} valid/suspected/connector_lot
+
+> **Erster Befund (Auswertung offen):** Funktionskriterium aus CONCEPT §10 **nicht erfüllt** – V2 exakt S04 3/3 (= B0), aber **S05 0/3 (B0 3/3)**; S01 ohne Zusatzbehauptung 3/3 ✓. V1S 42 % exakt (6/12 Zusatzbehauptungen), V2 67 % (3/12), B0 100 %, B1 0 %. S08w diesmal lösbar (10 E-204), bleibt per Festlegung explorativ. Die fehlerhaften Antworten (V2/S05, V2/S08 r?, V1S) sind noch **nicht gelesen** – nächster Schritt.
