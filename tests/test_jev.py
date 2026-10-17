@@ -125,9 +125,11 @@ def test_state_from_archived_s05_run_fits_context_and_excludes_v2_conclusions():
     assert "station_temperature" not in text and "sensor_t1" not in text  # V2's assessments never enter the state
 
 
-def test_log_line_writes_protocol_without_state_text(tmp_path):
+def test_log_line_stores_exact_request_and_code_version(tmp_path):
+    """A replay needs the request as sent (state, model, questions) and the code that built it - not just a hash."""
     client = JevClient(api_key="k", transport=_fake_api({}))
-    resp = client.system_one({"engineer_question": "GEHEIM-TEXT"})
+    state = {"engineer_question": "Frage", "tool_outputs": [{"tool": "describe_signal", "output": {"iq_t1_relation": "decoupled"}}]}
+    resp = client.system_one(state)
     path = tmp_path / "jev.jsonl"
     log_line(
         path,
@@ -139,4 +141,10 @@ def test_log_line_writes_protocol_without_state_text(tmp_path):
     assert (
         rec["model_requested"] == "jev-1.13.0" and rec["scoring"]["next_check_ok"] and rec["verdicts"]["t1_unreliable"]["verdict"] == "yes"
     )
-    assert "GEHEIM-TEXT" not in path.read_text(encoding="utf-8") and len(rec["state_sha256"]) == 64
+    assert rec["request"] == {"state": state, "model": "jev-1.13.0", "questions": QUESTIONS}
+    assert len(rec["state_sha256"]) == 64 and set(rec["code"]) == {"commit", "dirty"}
+
+
+def test_product_defect_question_asks_for_additional_systematic_cause():
+    text = QUESTIONS["product_defect"]["instructions"].lower()
+    assert "additional" in text and "systematic" in text and "background" in text

@@ -14,6 +14,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import subprocess
 import time
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
@@ -48,7 +49,11 @@ QUESTIONS: dict[str, dict[str, Any]] = {
     },
     "product_defect": {
         "type": "noul",
-        "instructions": "There is evidence of a product defect that is independent of the test environment (e.g. a lot concentration).",
+        "instructions": (
+            "Beyond the normal background failure rate (a few isolated units with mixed codes), the data shows an ADDITIONAL "
+            "SYSTEMATIC product-defect cause for the investigated group that is independent of the test environment "
+            "(e.g. failures concentrated in one lot, firmware or component)."
+        ),
     },
 }
 
@@ -84,7 +89,12 @@ def noul_verdict(p: float) -> str:
 
 
 def build_state(question: str, tool_calls: list, spec: dict | None) -> dict:
-    """Same evidence V2 saw, nothing V2 concluded. Deterministic given the stored run."""
+    """Prepared evidence from the stored run - deterministic, but NOT byte-identical to what V2 saw (CONCEPT §12):
+    - engineering tool outputs (ENGINEERING_TOOLS) complete, with their inputs;
+    - raw result lists (get_recent_results etc.) omitted - V2 could page through them, Jev cannot;
+    - search_docs hits reduced to citation + first DOC_EXCERPT_CHARS characters;
+    - specification limits/validity added explicitly (V2 had them via the spec JSON and documents);
+    - nothing V2 concluded: no report, assessments, hypotheses or answer text."""
     tools, docs = [], []
     for c in tool_calls or []:
         name, inp, raw = getattr(c, "name", None), getattr(c, "input", None) or {}, getattr(c, "output", "") or ""
@@ -119,6 +129,7 @@ class JevResponse:
     latency_ms: int
     state_sha256: str
     question_keys: list[str] = field(default_factory=list)
+    request: dict[str, Any] = field(default_factory=dict)  # exact body sent (state, model, questions) - for replays
 
     def verdicts(self) -> dict[str, Any]:
         out: dict[str, Any] = {}
@@ -150,6 +161,7 @@ class JevClient:
         if not self.api_key:
             raise RuntimeError("TYPESAFE_API_KEY is not set (put it in .env, never in the repo)")
         body = {"state": state, "model": self.model, "questions": questions}
+        self.last_request = body
         t0 = time.perf_counter()
         resp = self._client.post(
             f"{self.base_url}/v1/systemone",
@@ -168,6 +180,7 @@ class JevClient:
             latency_ms=latency,
             state_sha256=state_digest(state) if isinstance(state, dict) else hashlib.sha256(json.dumps(state).encode()).hexdigest(),
             question_keys=list(questions.keys()),
+            request=body,
         )
 
 
@@ -191,7 +204,20 @@ def score_against_expected(scenario: str, verdicts: dict[str, Any]) -> dict[str,
     }
 
 
+def code_version() -> dict[str, Any]:
+    """Git commit and dirty flag of the working tree, so a protocol line names the code that built the request."""
+    try:
+        root = Path(__file__).resolve().parents[3]
+        commit = subprocess.run(["git", "rev-parse", "HEAD"], cwd=root, capture_output=True, text=True, timeout=5).stdout.strip()
+        dirty = bool(subprocess.run(["git", "status", "--porcelain"], cwd=root, capture_output=True, text=True, timeout=5).stdout.strip())
+        return {"commit": commit or None, "dirty": dirty}
+    except (OSError, subprocess.SubprocessError):
+        return {"commit": None, "dirty": None}
+
+
 def log_line(path: Path, run_key: dict, response: JevResponse, scoring: dict) -> None:
+    """One JSON line per call: the exact request (state, model, questions), the answers, usage, latency and the
+    code version. The state is stored in full - a hash alone cannot reproduce an input (review 17.10.)."""
     path.parent.mkdir(parents=True, exist_ok=True)
     rec = {
         "ts": datetime.now(UTC).isoformat(timespec="seconds"),
@@ -199,6 +225,7 @@ def log_line(path: Path, run_key: dict, response: JevResponse, scoring: dict) ->
         **asdict(response),
         "verdicts": response.verdicts(),
         "scoring": scoring,
+        "code": code_version(),
     }
     with path.open("a", encoding="utf-8") as f:
         f.write(json.dumps(rec, ensure_ascii=False) + "\n")
