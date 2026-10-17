@@ -235,3 +235,29 @@ Neue Verifier-Stufe nach `CONCEPT.md` §11 (`copilot/consistency.py`, Marken K0�
 | V2 | – | – | **K1 3/3 · K2 3/3 · K3 3/3** | K4 3/3 | K4 2/3 |
 
 Lesehilfe: K0 = Sensorplausibilität (`describe_signal`) nicht ausgeführt (Abdeckung); K1 = Temperaturmessung in Zweifel, Übertemperatur nicht unabhängig belegt (Widerspruch); K2 = Stationsursache mit Bauteilverdacht in einer Bewertung (Prüfhinweis); K3 = konkurrierende Festlegungen im identischen Geltungsbereich (Prüfhinweis, kann berechtigter Mehrfachfehler sein); K4 = stationsübergreifender Losvergleich fehlt (Abdeckung). Zahlen = Läufe mit dieser Marke von 3. Der S05-Fehler von V2 wird damit in allen drei Wiederholungen automatisch sichtbar; auf S08 trifft K4 alle drei V2-Wiederholungen, obwohl r0 und r2 „exakt" waren – Abdeckungsmarke, kein Fehlerurteil. Einzelheiten und Abweichungen von der Vorab-Erwartung: `CONCEPT.md` §11, Replay-Befund.
+
+## 2026-10-17 21:17 UTC · Jev-Schattenexperiment (CONCEPT §12) · jev-1.13.0 · 15 Anfragen · offline aufbereitete Zustände aus Lauf 4 (V2-Werkzeugausgaben) · kein Copilot-Aufruf
+
+Protokoll: `data/evals/jev/jev-20261017-211737.jsonl` (je Zeile exakter Request, Antworten, Token, Latenz, Code `86e185e`; `dirty: true` nur wegen einer untracked Editor-Sicherung, keine getrackte Änderung). Eingabetoken gesamt 142 764, berechnete Kosten **0,0060 USD**, Latenz Ø 342 ms. Die Vorab-Erwartungen aus §12 wurden nicht verändert.
+
+| Szenario | Q1 Gegenprüfung (Jev) | conf | Q1 erwartet | Q2 T1 unzuverlässig | Q3 zusätzl. Produktursache | feste Regel (c) |
+|---|---|---:|---|---|---|---|
+| S01 r0–r2 | `reference_thermometer` **✗ 3/3** | 0,37–0,45 | `retest_valid_temperature` | nein ✓ (0,13–0,22) | nein ✓ (0,07–0,10) | retest ✓ |
+| S04 r0–r2 | `no_additional_check` ✓ 3/3 | 0,30–0,54 | `no_additional_check` | nein ✓ (0,09–0,10) | nein ✓ (0,11–0,19) | keine ✓ |
+| S05 r0–r2 | `reference_thermometer` ✓ 3/3 | **0,97–0,99** | `reference_thermometer` | **ja** ✓ (0,71–0,77) | nein ✓ (0,10–0,21) | Referenzfühler ✓ |
+| S08 r0–r2 | `retest_valid_temperature` ✓ 3/3 (zweite zulässige Option) | 0,31–0,39 | lot_cross_station **oder** retest | nein ✓ (0,14–0,17) | **ja** ✓ (0,79–0,92) | Los stationsübergreifend ✓ |
+| S08w r0–r2 (E) | `retest_valid_temperature` ✓ 3/3 (zweite zulässige Option) | 0,27–0,49 | lot_cross_station **oder** retest | nein ✓ (0,16–0,25) | **ja** ✓ (0,84–0,93) | Los stationsübergreifend ✓ |
+| **Summe** | **12/15** | | | **15/15**, 0 unentschieden | **15/15**, 0 unentschieden | **15/15** |
+
+**Gegen das Erfolgsmaß aus §12** („≥ 12/15 erwartete Gegenprüfung und Q2/Q3 ≥ 12/15"): erreicht, Q1 genau an der Schwelle. Das ist nach §12 ein **Hinweis**, dass ein typisiertes Auswahlmodell für diese Teilaufgabe taugt, kein Nachweis.
+
+**Was die Zahlen zusätzlich zeigen (ehrlich):**
+- **S01 systematisch verfehlt:** Bei echter Temperaturdrift (Iq folgt T1) wählt Jev dreimal den Referenzfühler. Die Verteilung ist dabei fast ein Münzwurf (r0: Referenzfühler 0,50, Wiederholung 0,49). Gleichzeitig beantwortet Q2 „T1 unzuverlässig" mit 0,13–0,22 **nein**. Die Antworten auf Q1 und Q2 sind also untereinander nicht konsistent; Q1 unterscheidet reale Drift und Sensorfehler nicht, Q2 schon.
+- **S08: zulässig, aber die schwächere Option.** Jev wählt die Wiederholung unter gültiger Temperatur, nicht den stationsübergreifenden Losvergleich, obwohl Q3 den Produktdefekt mit 0,79–0,93 bejaht. Der Losvergleich ist genau die Abdeckung, die V2 fehlte (K4).
+- **Konfidenz:** hoch nur auf S05 (≥ 0,9: 3/3 Treffer); unter 0,5 liegen 11 von 15 Antworten (8/11 Treffer). Mit 15 Fällen ist das keine Kalibrierungsaussage, nur die Beobachtung, dass Jev auf S01/S04/S08 selbst unsicher ist.
+- **Die feste Regel (c)** aus §12 (decoupled → Referenzfühler; Los konzentriert → Los stationsübergreifend; INVALID → Wiederholung; sonst keine) trifft auf denselben Zuständen **15/15**. Für die bekannten Muster ist Jev der Regel damit nicht überlegen, dasselbe Bild wie B0 gegenüber V2 in Lauf 4.
+- **V2s `next_test`** (Schlüsselwortabgleich, grob): S05 nennt dreimal den Referenzfühler, S08/S08w sechsmal das Los; S01 nennt zweimal Wiederholung, aber dreimal auch das Los; S04 schlägt in zwei von drei Antworten trotz unauffälliger Linie etwas vor. Jev ist auf S04 zurückhaltender als V2 (0/3 unnötige Untersuchung), auf S08 weniger gezielt.
+
+**Grenzen:** 15 Entwicklungsfälle, auf denen die Fragen formuliert wurden; keine zurückgehaltenen Prüffälle (§12 fordert sie vor jeder weiteren Aussage). Der Zustand ist aufbereitete Evidenz (§12), nicht byte-gleich mit V2s Kontext. Q2 liegt auf S05 mit 0,71–0,77 knapp über der Schwelle 0,7. Nichts davon ändert das Ergebnis von Lauf 4 oder die Verifier-Marken aus §11.
+
+**Konsequenz:** Kein Einbau. Falls weiterverfolgt: zuerst die zurückgehaltenen Gegenbeispiele aus §12 (Sensorfehler mit echter Übertemperatur, ungültige Prüfbedingungen mit belegtem Bauteildefekt), dann eine Formulierung von Q1, die reale Drift und Sensorfehler trennt (z. B. Option „Wiederholung" mit ausdrücklichem Bezug auf Iq folgt T1). Erst danach wäre ein Vergleich mit Routing/Triage (ARCHITECTURE §4.4) sinnvoll.
