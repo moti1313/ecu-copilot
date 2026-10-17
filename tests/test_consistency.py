@@ -110,7 +110,10 @@ def test_k3_only_on_identical_scope_not_on_nested_lot_scope():
 
 # --- K4: coverage of the lot comparison -----------------------------------------------------------------
 def test_k4_requires_successful_matching_cross_station_call():
-    report = {"assessments": [_a(lot="L2439-07", validity="valid", defect="strong", cause="connector_lot")]}
+    report = {
+        "assessments": [_a(lot="L2439-07", validity="valid", defect="strong", cause="connector_lot")],
+        "evidence": [{"statement": "E-120 im Los L2439-07", "source_type": "live", "ref": {}, "citation": "", "supports": ""}],
+    }
     assert codes(check_consistency(report, [_cluster(station=2)])) == ["K4"]  # station-filtered only
     assert codes(check_consistency(report, [_cluster(station=None, error=True)])) == ["K4"]  # failed call does not count
     assert codes(check_consistency(report, [_cluster(station=None, lot="L2441-03")])) == ["K4"]  # other lot on top
@@ -154,3 +157,54 @@ def test_replay_run4_matches_concept_11_expectations():
         assert rows[("S08-drift-and-bad-lot", "v2", rep)] == {"K4"}, rows[("S08-drift-and-bad-lot", "v2", rep)]
     # the exploratory S08w/V2 r2 did compare lots across stations -> nothing
     assert rows[("S08w-drift-and-bad-lot-weak", "v2", 2)] == set()
+
+
+# --- Review-Korrekturen 17.10. (Reviewer) --------------------------------------------------------------------
+def test_k1_fires_from_assessments_alone_without_describe_signal():
+    """Sensor suspicion and temperature commitment both in the report: K1 must not depend on a signal call (K0 also)."""
+    report = {
+        "assessments": [
+            _a(validity="invalid_temperature", defect="none_assessable", cause="station_temperature"),
+            _a(validity="unknown", defect="suspected", cause="sensor_t1"),
+        ]
+    }
+    assert codes(check_consistency(report, [])) == ["K0", "K1", "K2", "K3"]
+
+
+def test_k0_requires_data_and_a_station_bound_scope():
+    report = {"assessments": [_a(validity="invalid_temperature", defect="none_assessable", cause="station_temperature")]}
+    empty = ToolCall(
+        name="describe_signal",
+        input={"station": 2, "variant": "B", "minutes": 20},
+        output=json.dumps({"scope": {"station": 2, "variant": "B"}, "tested": 0, "iq_t1_relation": "not assessable"}),
+    )
+    flags = check_consistency(report, [empty])
+    assert codes(flags) == ["K0"] and "tested = 0" in flags[0].detail
+    # assessment for all stations: a single station's signal call does not cover it
+    all_stations = {
+        "assessments": [_a(station=None, validity="invalid_temperature", defect="none_assessable", cause="station_temperature")]
+    }
+    flags = check_consistency(all_stations, [_describe("iq_follows_t1", station=2)])
+    assert codes(flags) == ["K0"] and "ohne Stationsangabe" in flags[0].detail
+
+
+def test_k4_code_rule_and_lot_anywhere_in_groups():
+    report = {
+        "assessments": [_a(lot="L2439-07", validity="valid", defect="strong", cause="connector_lot")],
+        "evidence": [{"statement": "E-120 häuft sich im Los L2439-07", "source_type": "live", "ref": {}, "citation": "", "supports": ""}],
+    }
+    # cross-station call for a code the report never mentions does not clear the mark
+    assert codes(check_consistency(report, [_cluster(station=None, code="E-204")])) == ["K4"]
+    # code mentioned in the report clears it; so does an all-codes call
+    assert check_consistency(report, [_cluster(station=None, code="E-120")]) == []
+    assert check_consistency(report, [_cluster(station=None, code=None)]) == []
+    # the lot is in `groups` but not the top group: still covered
+    out = {
+        "by": "lot",
+        "code": None,
+        "concentrated": True,
+        "top": {"group": "L2441-03"},
+        "groups": [{"group": "L2441-03"}, {"group": "L2439-07"}],
+    }
+    second = ToolCall(name="cluster_failures", input={"station": None, "variant": "B", "by": "lot", "minutes": 30}, output=json.dumps(out))
+    assert check_consistency(report, [second]) == []

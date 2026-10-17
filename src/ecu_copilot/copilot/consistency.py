@@ -17,6 +17,7 @@ compared because assessments carry none.
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import asdict, dataclass
 
 STATION_CAUSES = {"station_temperature", "cell_noise", "fixture", "sensor_t1"}
@@ -76,18 +77,45 @@ def _covers(called: object, claimed: str | None) -> bool:
     return called in (None, "", "null") or (claimed is not None and str(called).strip().upper() == claimed)
 
 
-def _describe_for(a: dict, tool_calls: list) -> list[dict]:
+def _describe_for(a: dict, tool_calls: list) -> tuple[list[dict], str]:
+    """describe_signal outputs that cover this assessment: same station, variant covered, and data in the window
+    (tested > 0). describe_signal is station-bound, so an assessment without a station is never fully covered."""
     st, var, _ = _scope(a)
-    hits = []
-    for inp, out in _ok_outputs(tool_calls, "describe_signal"):
+    calls = _ok_outputs(tool_calls, "describe_signal")
+    if st is None:
+        seen = sorted({str((o.get("scope") or {}).get("station", i.get("station"))) for i, o in calls})
+        return [], (
+            "Bewertung ohne Stationsangabe; describe_signal ist stationsbezogen"
+            + (f" (ausgeführt für Station {', '.join(seen)})" if seen else " (nicht ausgeführt)")
+        )
+    hits, empty = [], 0
+    for inp, out in calls:
         sc = out.get("scope") if isinstance(out.get("scope"), dict) else {}
         c_st, c_var = sc.get("station", inp.get("station")), sc.get("variant", inp.get("variant"))
-        if st is not None and str(c_st).upper() != st:
+        if str(c_st).upper() != st or not _covers(c_var, var):
             continue
-        if not _covers(c_var, var):
+        tested = out.get("tested")
+        if isinstance(tested, int | float) and tested <= 0:
+            empty += 1
             continue
         hits.append(out)
-    return hits
+    if hits:
+        return hits, ""
+    if empty:
+        return [], f"describe_signal für Station {st} lieferte keine Prüfungen im Fenster (tested = 0)"
+    return [], "describe_signal wurde für diesen Geltungsbereich nicht erfolgreich ausgeführt"
+
+
+def _codes_in_report(report: dict | None) -> set[str]:
+    return set(re.findall(r"E-\d{3}", json.dumps(report or {}, ensure_ascii=False)))
+
+
+def _lot_in_output(out: dict, lot: str | None) -> bool:
+    if lot is None:
+        return True
+    groups = out.get("groups") if isinstance(out.get("groups"), list) else []
+    names = {str((g or {}).get("group") or "").upper() for g in groups} | {str((out.get("top") or {}).get("group") or "").upper()}
+    return lot in names
 
 
 # ---------------------------------------------------------------------------------------------
@@ -104,37 +132,35 @@ def check_consistency(report: dict | None, tool_calls: list) -> list[Consistency
         st, var, lot = _scope(a)
 
         if validity == "invalid_temperature":
-            described = _describe_for(a, tool_calls)
+            described, coverage_note = _describe_for(a, tool_calls)
             if not described:
-                flags.append(
-                    ConsistencyFlag(
-                        "K0", KINDS["K0"], [i], TEXTS["K0"], "describe_signal wurde für diesen Geltungsbereich nicht erfolgreich ausgeführt"
-                    )
-                )
-            else:
-                decoupled = [d for d in described if str(d.get("iq_t1_relation") or "") == "decoupled"]
-                same_scope_sensor = [
-                    j for j, b in enumerate(assessments) if j != i and _scope(b) == (st, var, lot) and b.get("root_cause") == "sensor_t1"
-                ]
-                if decoupled or same_scope_sensor:
-                    why = []
-                    if decoupled:
-                        why.append(f"describe_signal: iq_t1_relation=decoupled (Korrelation {decoupled[0].get('iq_t1_correlation')})")
-                    if same_scope_sensor:
-                        why.append(f"Bewertung {same_scope_sensor[0] + 1} nennt sensor_t1 für denselben Geltungsbereich")
-                    flags.append(ConsistencyFlag("K1", KINDS["K1"], [i, *same_scope_sensor], TEXTS["K1"], "; ".join(why)))
+                flags.append(ConsistencyFlag("K0", KINDS["K0"], [i], TEXTS["K0"], coverage_note))
+            # K1 compares assessments with each other and with stored signal output - independent of K0
+            decoupled = [d for d in described if str(d.get("iq_t1_relation") or "") == "decoupled"]
+            same_scope_sensor = [
+                j for j, b in enumerate(assessments) if j != i and _scope(b) == (st, var, lot) and b.get("root_cause") == "sensor_t1"
+            ]
+            if decoupled or same_scope_sensor:
+                why = []
+                if decoupled:
+                    why.append(f"describe_signal: iq_t1_relation=decoupled (Korrelation {decoupled[0].get('iq_t1_correlation')})")
+                if same_scope_sensor:
+                    why.append(f"Bewertung {same_scope_sensor[0] + 1} nennt sensor_t1 für denselben Geltungsbereich")
+                flags.append(ConsistencyFlag("K1", KINDS["K1"], [i, *same_scope_sensor], TEXTS["K1"], "; ".join(why)))
 
         if cause in STATION_CAUSES and defect in DEFECT_CLAIMS:
             flags.append(ConsistencyFlag("K2", KINDS["K2"], [i], TEXTS["K2"], f"root_cause={cause} mit defect_indication={defect}"))
 
         if cause == "connector_lot" and defect in DEFECT_CLAIMS:
+            codes = _codes_in_report(report)
             cross = [
                 (inp, out)
                 for inp, out in _ok_outputs(tool_calls, "cluster_failures")
                 if inp.get("station") in (None, "", "null")
                 and str(out.get("by") or inp.get("by") or "") == "lot"
                 and _covers(inp.get("variant"), var)
-                and (lot is None or str((out.get("top") or {}).get("group") or "").upper() == lot)
+                and (out.get("code") in (None, "") or str(out.get("code")) in codes)  # all failures, or a code the report talks about
+                and _lot_in_output(out, lot)
             ]
             if not cross:
                 flags.append(
@@ -143,7 +169,8 @@ def check_consistency(report: dict | None, tool_calls: list) -> list[Consistency
                         KINDS["K4"],
                         [i],
                         TEXTS["K4"],
-                        f"kein erfolgreicher cluster_failures-Aufruf ohne Stationsfilter für Los {lot or '?'} / Variante {var or 'alle'}",
+                        f"kein erfolgreicher cluster_failures-Aufruf ohne Stationsfilter (by=lot, Variante {var or 'alle'}, "
+                        f"alle Codes oder ein im Report genannter Code), der Los {lot or '?'} ausweist",
                     )
                 )
 
