@@ -131,3 +131,45 @@ Festgelegt **vor** dem Lauf; Änderungen danach werden als solche dokumentiert.
 1. Modell für den Benchmark: gpt-5 (teurer, 60 Läufe ≈ 4 $) oder gpt-5-mini (≈ 1 $, evtl. schlechter)? Vorschlag: beide, das ist selbst ein Ergebnis.
 2. Judge: gpt-5-mini (gleiche Familie) oder – bei verfügbarem unabhängigem Modellzugang – claude-haiku als unabhängiger Judge? Vorschlag: Haiku, wenn verfügbar.
 3. Soll der Twin Firmware-Version und Sensor-Offset als Störungstypen bekommen (für S05/S06)? Vorschlag: ja, es sind ~40 Zeilen.
+4. **Jev (TypeSafe) nur als kleines, getrenntes Experiment nach §11** (Vorschlag Reviewer, 17.10.2026): Aufgabe „Welche Gegenprüfung sollte zuerst erfolgen?" mit den Antwortmöglichkeiten *T1 mit Referenzsensor prüfen* / *Los stationsübergreifend untersuchen* / *weitere Daten sammeln* / *keine zusätzliche Untersuchung begründet*. Getrennte Fragen für Sensor- und Bauteilursache, weil beide gleichzeitig vorliegen können. Schattenbetrieb: Jev erhält dieselben Werkzeugausgaben und Spezifikationsauszüge wie das Vergleichssystem; Modellversion (fest), Eingaben, Antwort und Laufzeit werden protokolliert. Bewertung gegen einfache Regeln und V2 mit einer fachlichen Bewertungsregel (wählt es sinnvolle Gegenprüfungen, veranlasst es unnötige Untersuchungen, hält es sich bei unzureichenden Daten zurück); der Schlüsselwortcheck reicht dafür nicht. Vorhandene Fälle zum Entwickeln, zurückgehaltene zum Prüfen. **Zu den Zahlen:** `probabilities` ist die Antwortverteilung des Modells, `confidence` eine daraus berechnete Kennzahl; beides ist ohne eigene Prüfung kein Zuverlässigkeitsnachweis, die Kalibrierung auf unseren ECU-Fällen wird selbst gemessen. Voraussetzung: `TYPESAFE_API_KEY` in `.env` (lokal konfigurieren, nie im Repo). Ein besseres Ergebnis wird erst nach diesem Vergleich behauptet. Jev behebt die S05-Inkonsistenz nicht; deshalb zuerst §11.
+
+## 11. Konsistenzprüfung der Endbewertung – Konzept (Stand 17.10.2026, nach Lauf 4; Review-Korrekturen eingearbeitet)
+
+Noch kein Code, kein Lauf. Dieser Abschnitt legt fest, was ein Verifier-Schritt leisten soll, bevor er gebaut wird.
+
+**Anlass.** S05/V2 0/3 exakt (§10, `RUN4_REVIEW.md` §1). Alle drei Reports enthalten für denselben Geltungsbereich Station 2/B zwei Bewertungen: `invalid_temperature / none_assessable / station_temperature` und `unknown / suspected / sensor_t1`. `derive_finding()` verdichtet INVALID plus `suspected` vertragsgemäß zu `mixed`. Die Herkunftsprüfung (live 155/165) hat das nicht erkannt: Sie löst Referenzen gegen Werkzeugausgaben auf und prüft keine Bewertungen gegeneinander. Fehlende Stufe: Widerspruch zwischen Messpfadvertrauen, Gruppenbewertung und Ursache.
+
+**Erfolgsmaß dieses Schritts.** *Der Verifier macht bestimmte unbelegte oder widersprüchliche Festlegungen nachvollziehbar sichtbar. Die ursprünglichen Reports, Befunde und Exakt-Quoten bleiben unverändert.* Eine verbesserte Diagnoseleistung wird damit nicht behauptet.
+
+**Grundsatz: markieren, nicht verbieten.** Der Verifier setzt keine Ursache ein, ändert keine Bewertung und lässt `derive_finding()` unverändert. Er liefert eine Liste `consistency_flags` neben den bestehenden `flags` in `Verification` (Code, betroffene Bewertung(en), Begründung, fehlender Beleg). UI: Warnmarke je Bewertung. Benchmark: Spalte „Konsistenz-Marken", informativ, nicht Teil von „exakt". Sensorfehler und reale Übertemperatur können gleichzeitig vorliegen, eine Stationsursache schließt einen zusätzlichen Produktdefekt nicht aus; die Marke sagt nur, welche Begründung oder welcher Beleg fehlt.
+
+**Eingaben: ausschließlich das, was im Lauf gespeichert ist.** Report (`assessments`, `evidence`), die tatsächlich ausgeführten Werkzeugaufrufe mit Parametern und Ausgaben, der Dokumentindex. Keine Offline-Nachberechnung aus Snapshots; wenn eine Prüfung im Lauf nicht ausgeführt wurde, lautet die Marke „nicht geprüft", nicht „widersprüchlich". Eine zusätzliche Verifier-Eingabe wäre eine ausdrückliche Erweiterung dieses Abschnitts.
+
+**Grenzen des heutigen Schemas (Review 17.10.).** `assessments` tragen keinen Verweis auf ihre Belege; `evidence[].supports` nennt einen Hypothesentitel als freien Text. Der Verifier kann deshalb „je eigener Beleg je Bewertung" **nicht** zuverlässig zuordnen. Die Marken sind daher im ersten Durchstich **begründete Prüfhinweise**, keine aufhebbaren Bedingungen. Eine explizite Belegzuordnung je Bewertung wäre eine getrennte Schemaänderung mit eigener Festlegung.
+
+**Regeln (deterministisch).** Geltungsbereich = Tupel (station, variant, lot) **und** Zeitfenster der referenzierten Werkzeugaufrufe. Verschiedene Geltungsbereiche sind nicht automatisch unabhängig: „Station 2/B, alle Lose" umfasst das einzelne Los; zwei Referenzen auf denselben T1-Messpfad sind keine unabhängige Temperaturbestätigung.
+
+| Code | Bedingung | Marke (Text) | Art |
+|---|---|---|---|
+| **K0** Sensorplausibilität nicht geprüft | Bewertung mit `test_validity = invalid_temperature`, und im Lauf wurde `describe_signal` für diesen Geltungsbereich **nicht** erfolgreich ausgeführt | „Temperaturursache festgelegt, Sensorplausibilität (Iq↔T1) nicht geprüft" | Abdeckung |
+| **K1** Temperaturmessung selbst in Zweifel | `test_validity = invalid_temperature`, und für denselben Geltungsbereich liegt eine Bewertung mit `root_cause = sensor_t1` **oder** eine gespeicherte `describe_signal`-Ausgabe mit `iq_t1_relation = decoupled` vor | „Temperaturmessung dieses Messpfads in Zweifel; reale Übertemperatur nicht unabhängig belegt" | Widerspruch |
+| **K2** Stationsursache mit Bauteilverdacht | `root_cause` ∈ {station_temperature, cell_noise, fixture, sensor_t1} **und** `defect_indication` ∈ {suspected, strong} in derselben Bewertung | „Gemeinsame Festlegung von Stationsursache und Bauteilverdacht benötigt getrennte Begründung" | Prüfhinweis |
+| **K3** Konkurrierende Festlegungen im gleichen Geltungsbereich | zwei Bewertungen mit gleichem oder ineinander enthaltenem Geltungsbereich und überlappendem Zeitfenster, eine `invalid_*`, die andere `suspected`/`strong` | „Gemeinsame Festlegung benötigt getrennte Begründung; kann ein berechtigter Mehrfachfehler sein" | Prüfhinweis |
+| **K4** Stationsübergreifender Vergleich fehlt | `root_cause = connector_lot` mit `suspected`/`strong`, und kein **erfolgreicher** `cluster_failures`-Aufruf ohne Stationsfilter, der zu Fehlercode, Los, Variante und Zeitbereich der Bewertung passt | „Stationsübergreifender Vergleich für dieses Los fehlt" | Abdeckung |
+
+K4 ist keine Widerspruchsmarke, sondern eine Abdeckungsmarke; ein beliebiger ungefilterter Aufruf genügt nicht. Offen: Einordnung von `firmware` (Station oder Produkt) für K2.
+
+**Nicht-Ziele.** Keine automatische Korrektur. Keine Prompt-Änderung im selben Versuch, sonst ist die Wirkung nicht trennbar. B0 durchläuft dieselbe Prüfung.
+
+**Bewertung in zwei getrennt benannten Schritten.**
+
+1. *Archiv-Replay (Entwicklungsfälle, offline, ohne Modellaufruf)* gegen `data/evals/bench-20261017-090812/`. Erwartung je Lauf:
+   - S05/V2 r0–r2: K1 und K3 (3/3); K0 nicht (describe_signal wurde ausgeführt).
+   - S05/V1S r0–r2: **K0** („Sensorplausibilität nicht geprüft"); K1 kann dort nicht auslösen – keine der drei Antworten nennt `sensor_t1`, keine ruft `describe_signal` auf (am 17.10. am Archiv geprüft).
+   - S08/V2 r0, r2: keine K1–K3; S08/V2 r1: zusätzlich K4.
+   - S01, S04 bei V2 und alle B0-Läufe: keine Marke.
+2. *Fachliche Prüfung (zurückgehaltene Gegenbeispiele, neu zu bauen, synthetisch, ohne Modellaufruf)*: Sensorfehler **mit** echter Übertemperatur; ungültige Prüfbedingungen **mit** unabhängig belegtem Bauteildefekt; Belege aus unpassenden Zeitfenstern; ineinander enthaltene Geltungsbereiche. Erwartung: K2/K3 erscheinen als Prüfhinweis mit dem vorsichtigen Text, keine Marke behauptet einen Fehler. „B0 bekommt keine Marken" genügt allein nicht als Fehlalarmprüfung.
+
+Dazu Unit-Tests mit synthetischen Reports und ein Replay-Test gegen das Archiv. Erst danach wird getrennt entschieden, ob ein neuer bezahlter Lauf nötig ist; der bekäme eine eigene Festlegung wie §10 und wird nicht aus diesem Abschnitt abgeleitet.
+
+**Sprachregelung.** „Prüfung ungültig" heißt „Bauteilzustand offen, Wiederholung nötig", nie „Bauteil in Ordnung". Der Agent „schlägt Gegenprüfungen vor". Marken sagen „benötigt getrennte Begründung" oder „nicht geprüft", nicht „falsch".
