@@ -142,6 +142,30 @@ All test data comes from the digital twin and the documents are synthetic; the U
 Two more faults are built in: hall noise (E-310 above 45 dB(A), spec §6.1) and a bad connector lot
 (E-120 clustered on lot L2439-07, FMEA item 7) - a *real* failure the agent must not explain away.
 
+## CI, release and deploy
+
+Every push runs `.github/workflows/ci.yml`: `ruff check`, `ruff format --check`, the offline tests
+(`RAG_MODE=bm25`, mocked model clients), then a Docker smoke test that builds the image, starts Twin and
+Copilot with Compose and checks `/health` (Twin reachable, index ready). The paid `eval` job runs only on
+manual dispatch. Green CI proves that the software builds and its deterministic parts behave as tested;
+it does not prove a correct diagnosis (see the S05 case in the results).
+
+A Git tag `v*` runs `.github/workflows/release.yml`: it builds one versioned image (Twin and Copilot share
+it), smoke-tests exactly that image and publishes it to GHCR as `ghcr.io/moti1313/ecu-copilot:<tag>`.
+Deployment is a deliberate step on the target host:
+
+```bash
+docker login ghcr.io                     # once; the package is private like the repository
+export ECU_VERSION=v0.2.0
+docker compose -f docker-compose.yml -f docker-compose.release.yml pull
+docker compose -f docker-compose.yml -f docker-compose.release.yml up -d --no-build
+curl -s localhost:8000/health
+```
+
+Rollback: set `ECU_VERSION` to the previous tag and repeat pull and up; the data volume is kept.
+A Kubernetes target would reuse the same image with a Deployment per service, a Secret for the key and a
+readiness probe on `/health`; that is not part of this repository.
+
 ## Production notes (what would change at a real site)
 
 - **Data sources:** the twin becomes an adapter to the MES / test-station database; the nine tools keep their
