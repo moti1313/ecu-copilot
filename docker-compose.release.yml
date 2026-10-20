@@ -1,0 +1,11 @@
+# Run a published, versioned image instead of building locally (CD, part 2).
+#   docker login ghcr.io                                  # once; the package is private like the repository
+#   export ECU_VERSION=v0.2.0
+#   docker compose -f docker-compose.yml -f docker-compose.release.yml pull
+#   docker compose -f docker-compose.yml -f docker-compose.release.yml up -d --no-build
+# Rollback: set ECU_VERSION to the previous tag and repeat pull + up. Data (volume copilot-data) is kept.
+services:
+  twin:
+    image: ghcr.io/moti1313/ecu-copilot:${ECU_VERSION:-latest}
+  copilot:
+    image: ghcr.io/moti1313/ecu-copilot:${ECU_VERSION:-latest}
