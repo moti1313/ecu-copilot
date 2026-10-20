@@ -6,11 +6,16 @@ Status: Entwurf zur Abstimmung (16.10.2026). Dieses Dokument und `ARCHITECTURE.m
 
 ---
 
-## 1. Problem (eine Frage, kein Themenfeld)
+## 1. Problem, Lösung und erwarteter Nutzen
 
-> Ein EOL-Prüfstand meldet steigende Ausfälle. **Liegt es am Gerät – oder an Prüfbedingungen, Messtechnik, Prüfsoftware oder Material-Los?** Welche Belege stützen welche Erklärung, welcher Test trennt sie, und was entscheidet der Ingenieur?
+1. **Was ist das Problem?** Eine EOL-Prüfung meldet eine Auffälligkeit. Der Fehlercode allein erklärt nicht, ob das Gerät, die Prüfbedingungen, die Messtechnik oder mehrere Ursachen verantwortlich sind. Der Prüfingenieur braucht dafür Prüfdaten und die passende technische Vorgabe.
+2. **Warum ist das ein Problem?** Informationen zusammenzutragen und einzuordnen kann Zeit kosten. Eine falsche Zuordnung kann unnötige Nachprüfungen auslösen oder einen Defekt verdecken. Eine ungültige Prüfung lässt den Bauteilzustand offen.
+3. **Was ist die Lösung?** Der Copilot führt Daten und Dokumente für eine Untersuchung zusammen, nutzt Analysewerkzeuge und erstellt Bewertungen mit Belegen und vorgeschlagenen Gegenprüfungen. Der Verifier markiert unbelegte oder widersprüchliche Festlegungen. Der Ingenieur beurteilt den Bericht und hält den nächsten Schritt fest. Der Prototyp arbeitet mit synthetischen Daten aus dem Simulator.
+4. **Warum diese Lösung?** Explizite Berechnungen und Prüfkriterien liegen in Werkzeugen; das Modell wählt Werkzeuge aus und erklärt die Ergebnisse. Der Vergleich mit dem Regelwerk prüft, ob der Agent zusätzlichen Nutzen bringt. Lauf 4 zeigt bei den untersuchten bekannten Fehlerbildern einen Vorteil des Regelwerks (12/12 gegenüber 8/12 exakt), keinen diagnostischen Vorteil des Agenten. Details: [RUN4_REVIEW.md](RUN4_REVIEW.md).
 
-Das ist bewusst enger als „Root Cause Analysis". Es ist das Problem, das ein Automobilzulieferer bei seiner Akustikprüfung öffentlich beschrieben hat (95 % Pseudo-Fehler), und das die Westermo-Studie als Kernfrage industrieller Testanalyse identifiziert.
+**Wirtschaftliche Arbeitshypothese:** Der Copilot verkürzt die Vorbereitung und Dokumentation einer Untersuchung bei mindestens gleicher Entscheidungsqualität. Die öffentliche Meldung eines Zulieferers zur Akustikprüfung und die Westermo-Studie motivieren den Anwendungsfall (Quellen in [RESEARCH.md](RESEARCH.md)); der konkrete Arbeitsablauf, Bedarf und Nutzen bei einem konkreten Unternehmen sind damit nicht belegt.
+
+**Spätere Nutzenprüfung:** Prüfingenieure bearbeiten vergleichbare historische Fälle mit ihren bisherigen Werkzeugen und mit dem Copilot. Erfasst werden die gesamte Bearbeitungszeit einschließlich Kontrolle und Dokumentation bis zur fachlich vertretbaren nächsten Maßnahme sowie Fehlentscheidungen und unnötige Gegenprüfungen. Die fachliche Bewertung der nächsten Maßnahme erfolgt durch Prüfexperten. Für die Wirtschaftlichkeit zählen außerdem Integration, Betrieb und Dokumentpflege; freigewordene Zeit ist zunächst zusätzliche Kapazität. Der Szenario-Benchmark beantwortet diese Nutzenfrage nicht.
 
 ## 2. Was V2 anders macht als V1 (die drei Unterschiede)
 

@@ -5,14 +5,30 @@ An investigation assistant for test engineers on an electronics end-of-line (EOL
 The prototype runs against a stateful **simulator of three parallel EOL test stations** for door control units
 (DCU-A1 / DCU-B2). Test data and engineering documents are synthetic; no physical production line is connected.
 
-> **The question.** Is a failed test caused by the unit, invalid test conditions, a sensor, or several causes?
-> The engineer opens a test result, investigates with the copilot, inspects the evidence and records a next step.
-> Invalid test conditions do not establish that a unit is healthy. Referenced evidence does not by itself prove
-> a diagnosis. Production accuracy and time saved by engineers have not been established.
-
 **Presentation (German):** [slide PDF](design/presentation/ECU-Copilot-Praesentation.pdf) ·
 [diagrams and speaker notes](design/presentation/README.md) ·
 [implemented architecture and data flow](design/ARCHITECTURE_CURRENT.md).
+
+## Problem and intended benefit
+
+1. **What is the problem?** A failed EOL test does not identify its cause. The engineer needs to distinguish
+   a unit defect, invalid test conditions, an unreliable measurement and concurrent causes, using test data
+   and the applicable technical specification.
+2. **Why does it matter?** Gathering and interpreting that context can take time. A wrong conclusion can
+   cause unnecessary re-tests or leave a defect unresolved. Invalid test conditions do not establish that
+   a unit is healthy.
+3. **What is the solution?** The copilot retrieves data and documents, calls engineering tools and prepares
+   group assessments with evidence and proposed counter-checks. The verifier marks unsupported or
+   conflicting assessments. The engineer reviews the report and records a next step.
+4. **Why this approach?** Explicit calculations and criteria belong in tools; the model selects tools and
+   explains their results. The rule-engine baseline tests whether adding an agent helps. Matching an
+   evidence reference does not by itself prove a diagnosis.
+
+**Economic hypothesis:** reduce investigation preparation and documentation time while maintaining decision
+quality. This is a target workflow, not an observed process at any specific company. Production accuracy and engineer time
+savings have not been established. A future pilot should compare the existing workflow with copilot-assisted
+work on historical cases, measuring time through a defensible next step, including review, and the quality
+of that step. Integration, operation and maintenance costs also count. See the [concept (German)](design/CONCEPT.md#1-problem-lösung-und-erwarteter-nutzen).
 
 ## Architecture
 
