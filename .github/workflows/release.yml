@@ -1,0 +1,49 @@
+name: release
+# CD, part 1: a Git tag v* builds ONE versioned image (twin and copilot share it) and publishes it to GHCR.
+# Deployment (part 2) is a deliberate step on the target host, see README "CI, release and deploy".
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    env:
+      IMAGE: ghcr.io/${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: build and tag
+        run: |
+          docker build \
+            --label org.opencontainers.image.revision=${{ github.sha }} \
+            --label org.opencontainers.image.version=${{ github.ref_name }} \
+            --label org.opencontainers.image.source=https://github.com/${{ github.repository }} \
+            -t "$IMAGE:${{ github.ref_name }}" -t "$IMAGE:latest" .
+      - name: smoke test the exact image before publishing
+        env:
+          ECU_VERSION: ${{ github.ref_name }}
+          RAG_MODE: bm25
+          LLM_PROVIDER: openai
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.release.yml up -d --no-build twin copilot
+          for i in $(seq 1 40); do
+            if curl -fsS http://localhost:8000/health -o /tmp/health.json 2>/dev/null && grep -q '"status":"ok"' /tmp/health.json; then break; fi
+            sleep 3
+          done
+          cat /tmp/health.json; echo
+          grep -q '"twin_reachable":true' /tmp/health.json && grep -q '"index_ready":true' /tmp/health.json
+          docker compose -f docker-compose.yml -f docker-compose.release.yml down -v
+      - name: publish
+        run: |
+          docker push "$IMAGE:${{ github.ref_name }}"
+          docker push "$IMAGE:latest"
+          echo "published $IMAGE:${{ github.ref_name }}" >> "$GITHUB_STEP_SUMMARY"
