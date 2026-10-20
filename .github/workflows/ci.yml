@@ -35,3 +35,27 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with: { name: eval-report, path: data/evals/ }
+
+  docker-smoke:
+    needs: lint-test
+    runs-on: ubuntu-latest
+    env:
+      RAG_MODE: bm25        # no embedding download in CI
+      LLM_PROVIDER: openai  # no key: the service starts, only /ask would fail - that is not part of this test
+    steps:
+      - uses: actions/checkout@v7
+      - run: docker compose up -d --build twin copilot
+      - name: wait for /health (copilot reports twin reachability and index readiness)
+        run: |
+          for i in $(seq 1 40); do
+            if curl -fsS http://localhost:8000/health -o /tmp/health.json 2>/dev/null && grep -q '"status":"ok"' /tmp/health.json; then break; fi
+            sleep 3
+          done
+          cat /tmp/health.json; echo
+          grep -q '"twin_reachable":true' /tmp/health.json
+          grep -q '"index_ready":true' /tmp/health.json
+          curl -fsS http://localhost:8001/faults | grep -q '^\[\]$'
+      - if: failure()
+        run: docker compose logs --tail 60
+      - if: always()
+        run: docker compose down -v
