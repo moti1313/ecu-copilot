@@ -32,7 +32,7 @@ jobs:
       - run: uv run python -m ecu_copilot.rag.ingest
       - run: (uv run uvicorn ecu_copilot.twin.api:app --port 8001 &) && sleep 5
       - run: uv run python evals/run.py
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with: { name: eval-report, path: data/evals/ }
 
