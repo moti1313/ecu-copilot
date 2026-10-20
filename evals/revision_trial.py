@@ -265,6 +265,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--send", action="store_true")
     ap.add_argument("--model", default=None, help="default: gpt-5 as in run 4")
+    ap.add_argument("--resume", default=None, help="existing protocol file: skip cases already recorded there and append")
     args = ap.parse_args()
     model = args.model or "gpt-5"
 
@@ -296,6 +297,13 @@ def main() -> int:
         client = openai.OpenAI(max_retries=RETRIES, timeout=TIMEOUT_S)
     log = OUT_DIR / f"revision-{datetime.now(UTC).strftime('%Y%m%d-%H%M%S')}.jsonl"
     OUT_DIR.mkdir(parents=True, exist_ok=True)
+    done: set[tuple[str, int]] = set()
+    if args.resume:
+        log = Path(args.resume)
+        for line in log.read_text(encoding="utf-8").splitlines():
+            rec = json.loads(line)
+            done.add((rec["scenario"], rec["repeat"]))
+        print(f"Fortsetzung: {len(done)} Fälle bereits in {log.name}, werden übersprungen")
 
     print(f"{'Fall':<26}{'Art':<9}{'vorher':<8}{'Marken':<12}{'~Token':<8}{'nachher':<9}{'Marken':<12}{'Ergebnis'}")
     tally: dict[str, int] = {}
@@ -303,6 +311,8 @@ def main() -> int:
     for case in CASES:
         scenario, rep_i, kind = case
         label = f"{scenario[:22]} r{rep_i}"
+        if (scenario, rep_i) in done:
+            continue
         if not args.send:
             run = runs[(scenario, "v2", rep_i)]
             calls = calls_of(run)
