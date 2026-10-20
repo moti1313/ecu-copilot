@@ -33,7 +33,7 @@ services:
       JAEGER_UI_URL: http://localhost:16686
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
       ANTHROPIC_OPEN_TELEMETRY_TRACES_CONTENT_MODE: content   # prompts/answers visible in Jaeger (local demo only)
-      RAG_MODE: hybrid
+      RAG_MODE: ${RAG_MODE:-hybrid}   # bm25 for CI smoke tests (no embedding download)
     volumes:
       - copilot-data:/data   # embedding model cache, chroma index, metrics, 8D reports
     ports:
