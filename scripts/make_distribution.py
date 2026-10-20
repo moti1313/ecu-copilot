@@ -43,6 +43,8 @@ INCLUDE_FILES = [
     ".env.example",
     ".gitlab-ci.yml",
     ".github/workflows/ci.yml",
+    ".github/workflows/release.yml",
+    "docker-compose.release.yml",
     "scripts/update_ui_reference.py",  # build_presentation.py needs matplotlib (not a project dependency) - kept internal
     "design/ARCHITECTURE_CURRENT.md",
     "design/CONCEPT.md",
