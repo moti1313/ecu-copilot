@@ -261,3 +261,24 @@ Protokoll: `data/evals/jev/jev-20261017-211737.jsonl` (je Zeile exakter Request,
 **Grenzen:** 15 Entwicklungsfälle, auf denen die Fragen formuliert wurden; keine zurückgehaltenen Prüffälle (§12 fordert sie vor jeder weiteren Aussage). Der Zustand ist aufbereitete Evidenz (§12), nicht byte-gleich mit V2s Kontext. Q2 liegt auf S05 mit 0,71–0,77 knapp über der Schwelle 0,7. Nichts davon ändert das Ergebnis von Lauf 4 oder die Verifier-Marken aus §11.
 
 **Konsequenz:** Kein Einbau. Falls weiterverfolgt: zuerst die zurückgehaltenen Gegenbeispiele aus §12 (Sensorfehler mit echter Übertemperatur, ungültige Prüfbedingungen mit belegtem Bauteildefekt), dann eine Formulierung von Q1, die reale Drift und Sensorfehler trennt (z. B. Option „Wiederholung" mit ausdrücklichem Bezug auf Iq folgt T1). Erst danach wäre ein Vergleich mit Routing/Triage (ARCHITECTURE §4.4) sinnvoll.
+
+## 2026-10-20 20:46–21:05 UTC · Überarbeitungsversuch Stufe b (CONCEPT §13) · gpt-5, medium, 24 000 Tokens · 11 Aufrufe · archivbasiert, ohne Twin, ohne Werkzeuge
+
+Protokoll: `data/evals/revision/revision-20261020-204629.jsonl` (je Fall: vollständige Nachrichten, alle Aufrufparameter, Codeversion `f9a67bd`, beide Reports, Bewertung vorher/nachher). Die letzten zwei Fälle (S08 r0, r2) liefen nach einer Unterbrechung über `--resume` mit derselben Festlegung; dabei war eine uncommittete Skriptänderung (nur die Fortsetzungsoption) im Arbeitsbaum, daher `dirty: true` für diese zwei Datensätze. Festlegung und Erfolgsmaß (§13, Stufe b) wurden vor dem ersten Aufruf geschrieben und nicht verändert. Lauf 4 bleibt unverändert.
+
+**Erfolgsmaß verfehlt:** K1-Fälle `fixed` **0/3** (gefordert ≥ 2/3); Kontrollfälle `unchanged_correct` **8/8** (gefordert 8/8); `degraded` 0; `no_report`/`api_error` 0. Kosten **0,881 USD** (Schätzung war 0,5–0,8), Eingabe 161 339 Token, Ausgabe 67 952 Token, Latenz Ø 63 s je Aufruf.
+
+| Fall | Art | vorher | nachher | Ergebnis | Gesamtbefund | Marken vorher → nachher | Herkunft live |
+|---|---|---|---|---|---|---|---|
+| S05 r0 | K1 | nicht exakt | nicht exakt | `unchanged_wrong` | mixed → **real_failure** | K1,K2,K3 → K2 | 12/12 → 13/13 |
+| S05 r1 | K1 | nicht exakt | nicht exakt | `unchanged_wrong` | mixed → **real_failure** | K1,K2,K3 → K2 | 11/11 → 11/11 |
+| S05 r2 | K1 | nicht exakt | nicht exakt | `unchanged_wrong` | mixed → **real_failure** | K1,K2,K3 → K2 | 7/8 → 8/8 |
+| S01 r0–r2 | Kontrolle | exakt | exakt | `unchanged_correct` 3/3 | pseudo_failure | – → – | unverändert |
+| S04 r0–r2 | Kontrolle | exakt | exakt | `unchanged_correct` 3/3 | unclear | – → – | unverändert |
+| S08 r0, r2 | Kontrolle | exakt | exakt | `unchanged_correct` 2/2 | mixed | K4 → K4 | unverändert |
+
+**Was in S05 tatsächlich passiert ist.** Das Modell hat in allen drei Fällen genau die Zeile gestrichen, die die K1-Rückmeldung benannte: `invalid_temperature / none_assessable / station_temperature`. Übrig blieb unverändert `unknown / suspected / sensor_t1`, also der Prüfstandssensor weiter als **Bauteilverdacht**. Erwartet war `unknown / none / sensor_t1`. K1 und K3 verschwinden, K2 bleibt. Der Gesamtbefund wechselt dadurch von `mixed` zu `real_failure` („Hinweis auf Bauteilfehler"); für den Ingenieur ist das eher irreführender als vorher, weil die ungültige Prüfung nicht mehr erkennbar ist und ein Produktdefekt behauptet wird, den die Daten nicht stützen. Die Hypothesen im Text sind weiterhin richtig gewichtet (Sensorfehler `strong`, Übertemperatur `weak`/`moderate`), die Belege lösen sich vollständig auf. Der Widerspruch ist weg, der Fehler hat die Form gewechselt.
+
+**Was die Kontrollfälle zeigen.** Alle acht Bewertungslisten blieben byte-gleich; in zwei Fällen (S04 r2, S08 r0) wurde nur der Antworttext umformuliert. Die neutrale Rückmeldung hat also keine richtige Festlegung zerstört. Das ist der eine positive Befund dieses Versuchs und gilt nur für diese acht bekannten Fälle.
+
+**Einordnung.** Eine Rückmeldung, die den Widerspruch nennt, führt dazu, dass das Modell eine der beiden Festlegungen streicht, nicht dazu, dass es die Bedeutung der verbleibenden prüft. K2 stand in der Rückmeldung zwar in der Liste der Marken, aber nicht als Auftrag. Das ist zuerst ein Befund über die Rückmeldung, dann einer über das Modell. Eine Schleife wird deshalb **nicht** in den Agenten eingebaut. Falls weiterverfolgt: Rückmeldung je Marke mit der konkreten Frage (K2: „Prüfstandsursache oder Produktdefekt? Ein Sensorfehler der Station ist kein Bauteilverdacht ohne eigenen Beleg"), gleiche elf Fälle, gleiche Metriken, als eigener Versuch mit eigener Festlegung. Das wäre Stufe b2, nicht Stufe c. Auch ein dann positives Ergebnis bliebe ein Entwicklungsbefund auf bekannten Fällen.

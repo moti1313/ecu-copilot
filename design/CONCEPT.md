@@ -235,6 +235,8 @@ Kein Code, kein Lauf. Dieser Abschnitt beschreibt den nächsten Versuch, damit e
 
 **Satz für die Präsentation.** „Als nächsten Schritt würde ich die deterministischen Hinweise für eine einmalige Überarbeitung nutzen. Dabei messe ich Verbesserungen und Verschlechterungen getrennt. Bisher zeigt mein Prototyp die Widersprüche an; die Wirkung dieser Überarbeitung ist noch offen."
 
+**Ergebnis Stufe b (20.10.2026, 20:46 bis 21:05 UTC, nach Freigabe):** K1-Fälle `fixed` 0/3, Kontrollfälle `unchanged_correct` 8/8, `degraded` 0, 0,881 USD. **Erfolgsmaß verfehlt.** Das Modell strich in allen drei S05-Fällen die beanstandete Temperaturzeile und behielt `unknown / suspected / sensor_t1`; K2 blieb, der Gesamtbefund wurde `real_failure`. Keine Schleife im Agenten. Möglicher Folgeversuch b2: Rückmeldung je Marke mit konkreter Frage (insbesondere K2), eigene Festlegung. Einzelheiten: `RESULTS.md`, Abschnitt Überarbeitungsversuch Stufe b.
+
 **Festlegung Stufe b (20.10.2026, vor dem ersten Aufruf; Umsetzung `evals/revision_trial.py`, Tests `tests/test_revision_trial.py`).**
 | Punkt | Festlegung |
 |---|---|
