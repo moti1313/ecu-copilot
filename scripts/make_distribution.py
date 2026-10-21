@@ -45,6 +45,7 @@ INCLUDE_FILES = [
     ".github/workflows/ci.yml",
     ".github/workflows/release.yml",
     "docker-compose.release.yml",
+    "docker-compose.monitoring.yml",
     "scripts/update_ui_reference.py",  # build_presentation.py needs matplotlib (not a project dependency) - kept internal
     "design/ARCHITECTURE_CURRENT.md",
     "design/CONCEPT.md",
@@ -55,7 +56,7 @@ INCLUDE_FILES = [
     "design/presentation/ECU-Copilot-Praesentation.pdf",
     "design/presentation/Uebersicht.png",
 ]
-INCLUDE_TREES = ["src", "tests", "evals", "docs", "design/presentation/diagrams"]
+INCLUDE_TREES = ["src", "tests", "evals", "docs", "design/presentation/diagrams", "monitoring"]
 EXCLUDE_DIR_NAMES = {"__pycache__", ".pytest_cache", ".ruff_cache", ".venv", ".git", ".chroma"}
 EXCLUDE_SUFFIXES = {".pyc", ".swp"}
 # never ship (listed for the record, the allow-list already keeps them out)
