@@ -30,7 +30,7 @@ jobs:
     needs: checks
     runs-on: ubuntu-latest
     env:
-      IMAGE: ghcr.io/${{ github.repository }}
+      ECU_IMAGE: ghcr.io/${{ github.repository }}
     steps:
       - uses: actions/checkout@v7
       - uses: docker/login-action@v4
@@ -44,7 +44,7 @@ jobs:
             --label org.opencontainers.image.revision=${{ github.sha }} \
             --label org.opencontainers.image.version=${{ github.ref_name }} \
             --label org.opencontainers.image.source=https://github.com/${{ github.repository }} \
-            -t "$IMAGE:${{ github.ref_name }}" -t "$IMAGE:latest" .
+            -t "$ECU_IMAGE:${{ github.ref_name }}" -t "$ECU_IMAGE:latest" .
       - name: smoke test the exact image before publishing
         env:
           ECU_VERSION: ${{ github.ref_name }}
@@ -60,6 +60,9 @@ jobs:
           grep -q '"status":"ok"' /tmp/health.json
           grep -q '"twin_reachable":true' /tmp/health.json
           grep -q '"index_ready":true' /tmp/health.json
+          curl -fsS http://localhost:8000/metrics/prometheus -o /tmp/metrics.txt
+          grep -q '^ecu_copilot_questions_total ' /tmp/metrics.txt
+          grep -q '^ecu_copilot_twin_reachable 1$' /tmp/metrics.txt
       - name: show logs on failure
         if: failure()
         run: docker compose -f docker-compose.yml -f docker-compose.release.yml logs --tail 60
@@ -68,6 +71,6 @@ jobs:
         run: docker compose -f docker-compose.yml -f docker-compose.release.yml down -v
       - name: publish
         run: |
-          docker push "$IMAGE:${{ github.ref_name }}"
-          docker push "$IMAGE:latest"
-          echo "published $IMAGE:${{ github.ref_name }}" >> "$GITHUB_STEP_SUMMARY"
+          docker push "$ECU_IMAGE:${{ github.ref_name }}"
+          docker push "$ECU_IMAGE:latest"
+          echo "published $ECU_IMAGE:${{ github.ref_name }}" >> "$GITHUB_STEP_SUMMARY"

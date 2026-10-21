@@ -1,8 +1,8 @@
 # ECU Copilot – umgesetzte Architektur
 
-Stand: **17.10.2026**. Am Code abgeglichen; keine Beschreibung eines bereits produktiv eingesetzten Systems.
+Stand: **21.10.2026**. Am Code abgeglichen; keine Beschreibung eines bereits produktiv eingesetzten Systems.
 
-Die Präsentation liegt in [presentation/README.md](presentation/README.md), der ursprüngliche V2-Zielentwurf in [ARCHITECTURE.md](ARCHITECTURE.md). Dieser Ist-Stand hebt keine vereinbarten Anforderungen des Zielentwurfs auf. Er trennt die vorhandene Implementierung von geplanten Erweiterungen.
+Technische Diagramme: [presentation/README.md](presentation/README.md). Umfang und offene Erweiterungen: [CONCEPT.md](CONCEPT.md). Gemessene Ergebnisse: [RESULTS.md](RESULTS.md).
 
 ## 1. Das System in einem Satz
 
@@ -59,10 +59,14 @@ flowchart TB
 | Ingenieurfunktionen | Prüfgültigkeit, Änderungserkennung, Fehlerkonzentration, Signalbeschreibung | `engineering/validity.py`, `change.py`, `cluster.py`, `describe.py` |
 | RAG | Markdown-Abschnitte mit Metadaten; BM25; optional Vektorsuche und RRF | `rag/chunking.py`, `rag/index.py` |
 | Belegprüfung | Referenzen gegen Werkzeugausgaben und Dokumentindex; begrenzte Stützungsprüfung | `copilot/verify.py`: `verify_report` |
+| Konsistenzprüfung | K0–K4 markieren ausgewählte unbelegte oder konkurrierende Bewertungen; keine automatische Korrektur | `copilot/consistency.py` |
+| Monitoring | Persistierte Kennzahlen, Prometheus-Exposition und optionales Grafana-Dashboard | `copilot/metrics.py`, `monitoring/`, `docker-compose.monitoring.yml` |
 | Twin | Drei parallele Stationen; Generator, Fehlerregeln, Ergebnis-Puffer, REST und SSE | `twin/models.py`, `twin/simulator.py`, `twin/api.py` |
 | Benchmark | Szenarioaufbau, Snapshot, Systemvergleich, Metriken und Archiv | `evals/bench.py`, `evals/baselines.py` |
 
 `copilot/`, `engineering/`, `rag/` und Chroma sind **keine separaten Microservices**. Sie laufen als Python-Module bzw. eingebettete Bibliothek im Copilot-Prozess. Docker Compose startet drei Dienste: Twin, Copilot und Jaeger. Der Browser läuft außerhalb dieser Dienste.
+
+Das optionale Monitoring-Overlay ergänzt Prometheus und Grafana. Prometheus liest `/metrics/prometheus` alle 15 Sekunden; Grafana stellt die gespeicherten Kennzahlen dar. Das Dashboard zeigt unter anderem die Erreichbarkeit des Copilot-Ziels, den zuletzt geprüften Twin-Zustand, die Indexbereitschaft, Token, geschätzte Kosten und ein aus Histogramm-Buckets geschätztes p95. Diese Kennzahlen messen den Betrieb, keine diagnostische Richtigkeit. Die HTTP-Antwort von `/health` allein ist kein vollständiger Readiness-Nachweis; seine Abhängigkeitsfelder müssen ausgewertet werden.
 
 Der Suchindex und Embeddings werden lokal verarbeitet. An den gewählten LLM-Anbieter gehen die Frage, ausgewählte Dokumenttexte, Werkzeugbeschreibungen und während des Dialogs die verwendeten Werkzeugausgaben. „Alles bleibt lokal“ wäre daher falsch.
 
@@ -159,7 +163,7 @@ flowchart LR
     R --> E
 ```
 
-- Für Lauf 4 sind vier reguläre Szenarien plus das getrennte explorative S08w vorgesehen, mit drei Wiederholungen je System. Die Ergebnisse des konkreten Laufs stehen ausschließlich im zugehörigen Archiv und in `RESULTS.md`.
+- Lauf 4 verwendete vier reguläre Szenarien plus das getrennte explorative S08w, mit drei Wiederholungen je System. Die Ergebnisse des konkreten Laufs stehen ausschließlich im zugehörigen Archiv und in `RESULTS.md`.
 - Setup und erwartete Diagnose sind Auswertungswissen. Der Agent erhält die Frage und sein Werkzeugangebot; B0 bekommt zusätzlich den expliziten Untersuchungs-Scope (Station/Variante).
 - Nicht erfüllte Voraussetzungen und explorative Fälle bleiben sichtbar und werden separat ausgewiesen. S04-Fehlalarme des Detektors sind Ergebnisse, kein Ausschlussgrund.
 - V1S und V2 teilen das Berichtsformat; damit ist dieser Vergleich für den Werkzeugeffekt aussagekräftiger als B1 gegen V2. B1 verwendet das ältere Schema. B0 hat Regeln für die bekannten Muster.
@@ -178,11 +182,9 @@ flowchart LR
 | `simulate_retest` und automatische Gegenprüfung von Vorhersagen | geplant |
 | Firmwarewechsel und Fixture-Defekt als injizierbare Störungen | geplant |
 | Vollständige Auswahl aktueller gegenüber überholten Dokumentrevisionen | geplant; vorhandene Metadaten-/Belegprüfung ist kein vollständiger Revisionsworkflow |
-| Optionaler Router / Jev | zurückgestellt |
+| Optionaler Router / Jev | separates Schattenexperiment ausgeführt; kein Einbau in den Antwortpfad |
 | Physisch angebundener Twin und Nachweis an realen Produktionsdaten | spätere Validierung |
 
-## 9. Verbesserungen mit dem größten Nutzen
+## 9. Weitere Validierung
 
-Für den jetzigen Abschluss: dieses Architekturmodell verwenden, eine zusammenhängende Dashboard-Demo zeigen und Benchmarkbefunde einschließlich Fehlern erklären. Dafür ist keine neue Dienste-Landschaft nötig.
-
-Für eine spätere technische Erweiterung sind zuerst **zwei konkrete Grenzen** zu adressieren: eine feste Datenbasis pro Live-Untersuchung und eine erneute Prüfung derselben identifizierten Einheit. Erst damit lassen sich Zeitbezug und Gegenprüfung stärker absichern. Eine Nutzerstudie mit Prüfingenieuren und reale anonymisierte Prüfdaten würden anschließend den praktischen Nutzen prüfen. Diese Schritte sind nicht Teil der hier gelieferten Präsentationsunterlagen.
+Offen sind eine feste Datenbasis pro Live-Untersuchung und eine erneute Prüfung derselben identifizierten Einheit. Eine fachliche Bewertung an realen anonymisierten Prüfdaten und ein Vergleich der Bearbeitungszeit mit Prüfingenieuren würden den praktischen Nutzen untersuchen. Die synthetischen Szenarien allein beantworten diese Fragen nicht.

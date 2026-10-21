@@ -4,6 +4,9 @@ on:
   pull_request:
   workflow_dispatch:   # runs the paid eval job (needs ANTHROPIC_API_KEY secret)
 
+permissions:
+  contents: read
+
 jobs:
   lint-test:
     runs-on: ubuntu-latest
@@ -58,6 +61,9 @@ jobs:
           grep -q '"twin_reachable":true' /tmp/health.json
           grep -q '"index_ready":true' /tmp/health.json
           curl -fsS http://localhost:8001/faults | grep -q '^\[\]$'
+          curl -fsS http://localhost:8000/metrics/prometheus -o /tmp/metrics.txt
+          grep -q '^ecu_copilot_questions_total ' /tmp/metrics.txt
+          grep -q '^ecu_copilot_twin_reachable 1$' /tmp/metrics.txt
       - if: failure()
         run: docker compose logs --tail 60
       - if: always()

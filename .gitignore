@@ -7,3 +7,12 @@ data/
 .env.save
 .env.bak
 *.swp
+.env.*
+!.env.example
+.pytest_cache/
+.ruff_cache/
+# Personal preparation and raw evaluation records stay outside the public tree.
+design/notes/
+design/STATUS.md
+design/AUDIT.md
+design/presentation/SPRECHTEXT.md

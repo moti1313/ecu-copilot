@@ -13,7 +13,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 FROM base AS runtime
 COPY --from=deps /app/.venv /app/.venv
-COPY pyproject.toml uv.lock README.md ./
+COPY pyproject.toml uv.lock README.md LICENSE ./
 COPY src ./src
 COPY docs ./docs
 RUN --mount=type=cache,target=/root/.cache/uv uv sync --frozen --no-dev

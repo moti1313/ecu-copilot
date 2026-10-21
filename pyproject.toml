@@ -3,6 +3,7 @@ name = "ecu-copilot"
 version = "0.1.0"
 description = "Agent + RAG copilot over a digital twin of an EOL test line for door control units"
 readme = "README.md"
+license = "MIT"
 authors = [
     { name = "Morteza Molaei", email = "m.molaei@ostfalia.de" }
 ]
