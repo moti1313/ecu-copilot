@@ -13,7 +13,7 @@ from collections.abc import AsyncIterator
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, PlainTextResponse
 from opentelemetry import trace
 from pydantic import BaseModel, Field
 
@@ -21,7 +21,7 @@ from .. import config
 from ..rag.index import DocumentIndex
 from . import tools
 from .agent import make_copilot
-from .metrics import MetricsStore, now_iso
+from .metrics import MetricsStore, now_iso, prometheus_text
 from .telemetry import setup_tracing
 from .twin_client import TwinClient
 
@@ -149,6 +149,12 @@ def metrics() -> dict:
 @app.get("/metrics/recent")
 def metrics_recent(n: int = 20) -> list[dict]:
     return state["metrics"].recent(n)
+
+
+@app.get("/metrics/prometheus", response_class=PlainTextResponse)
+def metrics_prometheus() -> str:
+    """Prometheus text exposition of the same per-question metrics (see docker-compose.monitoring.yml)."""
+    return prometheus_text(state["metrics"].records(), health())
 
 
 @app.get("/health")

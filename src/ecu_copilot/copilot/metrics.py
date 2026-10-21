@@ -73,6 +73,9 @@ class MetricsStore:
             with self.path.open("a", encoding="utf-8") as f:
                 f.write(json.dumps(asdict(rec), ensure_ascii=False) + "\n")
 
+    def records(self) -> list[QuestionRecord]:
+        return list(self._records)
+
     def recent(self, n: int = 20) -> list[dict]:
         return [asdict(r) for r in self._records[-n:]][::-1]
 
@@ -102,3 +105,77 @@ class MetricsStore:
 
 def now_iso() -> str:
     return datetime.now(UTC).isoformat(timespec="seconds")
+
+
+# --- Prometheus exposition -----------------------------------------------------------------------
+# Text format for a Prometheus scrape. Recomputed from the appended records on every scrape, so the
+# counters are monotonic. No client library: the format is a handful of lines and stays dependency-free.
+LATENCY_BUCKETS_S = (5, 10, 20, 30, 60, 90, 120, 180, 300)
+
+
+def _label(v: object) -> str:
+    return str(v).replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n")
+
+
+def prometheus_text(records: list[QuestionRecord], health: dict | None = None) -> str:
+    health = health or {}
+    rs = records
+    lines: list[str] = []
+
+    def metric(name: str, kind: str, help_text: str, samples: list[tuple[str, float]]) -> None:
+        lines.append(f"# HELP {name} {help_text}")
+        lines.append(f"# TYPE {name} {kind}")
+        for labels, value in samples:
+            lines.append(f"{name}{labels} {value:g}")
+
+    metric("ecu_copilot_questions_total", "counter", "Questions answered (including failed ones)", [("", len(rs))])
+    metric("ecu_copilot_errors_total", "counter", "Questions that ended in an error", [("", sum(1 for r in rs if r.error))])
+    metric(
+        "ecu_copilot_citation_missing_total",
+        "counter",
+        "Document answers the guardrail flagged as uncited",
+        [("", sum(1 for r in rs if r.citation_missing))],
+    )
+    tokens = {
+        "input": sum(r.usage.get("input_tokens", 0) for r in rs),
+        "output": sum(r.usage.get("output_tokens", 0) for r in rs),
+        "cache_read": sum(r.usage.get("cache_read_input_tokens", 0) for r in rs),
+    }
+    metric("ecu_copilot_tokens_total", "counter", "Model tokens by kind", [(f'{{kind="{k}"}}', v) for k, v in tokens.items()])
+    metric(
+        "ecu_copilot_cost_usd_total",
+        "counter",
+        "Calculated model cost from token usage and configured prices (USD)",
+        [("", sum(r.cost_usd for r in rs))],
+    )
+    metric("ecu_copilot_iterations_total", "counter", "Model calls summed over all questions", [("", sum(r.iterations for r in rs))])
+    tools = Counter(t for r in rs for t in r.tools)
+    metric(
+        "ecu_copilot_tool_calls_total",
+        "counter",
+        "Tool calls by tool name",
+        [(f'{{tool="{_label(t)}"}}', n) for t, n in sorted(tools.items())],
+    )
+
+    lat = sorted(r.latency_s for r in rs)
+    lines.append("# HELP ecu_copilot_latency_seconds Answer latency per question")
+    lines.append("# TYPE ecu_copilot_latency_seconds histogram")
+    for b in LATENCY_BUCKETS_S:
+        lines.append(f'ecu_copilot_latency_seconds_bucket{{le="{b}"}} {sum(1 for x in lat if x <= b)}')
+    lines.append(f'ecu_copilot_latency_seconds_bucket{{le="+Inf"}} {len(lat)}')
+    lines.append(f"ecu_copilot_latency_seconds_sum {sum(lat):g}")
+    lines.append(f"ecu_copilot_latency_seconds_count {len(lat)}")
+
+    metric(
+        "ecu_copilot_twin_reachable",
+        "gauge",
+        "1 if the Twin answered the last health check",
+        [("", 1 if health.get("twin_reachable") else 0)],
+    )
+    metric("ecu_copilot_index_ready", "gauge", "1 if the document index is loaded", [("", 1 if health.get("index_ready") else 0)])
+    info_labels = (
+        f'{{provider="{_label(health.get("provider", ""))}",model="{_label(health.get("model", ""))}",'
+        f'prompt_version="{_label(config.PROMPT_VERSION)}"}}'
+    )
+    metric("ecu_copilot_build_info", "gauge", "Static configuration labels", [(info_labels, 1)])
+    return "\n".join(lines) + "\n"
