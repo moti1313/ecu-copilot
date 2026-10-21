@@ -2,7 +2,7 @@
  "uid": "ecu-copilot",
  "title": "ECU Copilot - Betrieb",
  "schemaVersion": 39,
- "version": 1,
+ "version": 2,
  "editable": true,
  "time": {
   "from": "now-24h",
@@ -125,8 +125,8 @@
    }
   },
   {
-   "id": 4,
-   "title": "Twin erreichbar",
+   "id": 11,
+   "title": "Copilot wird abgefragt (up)",
    "type": "stat",
    "gridPos": {
     "x": 12,
@@ -141,13 +141,15 @@
    "targets": [
     {
      "refId": "A",
-     "expr": "ecu_copilot_twin_reachable",
+     "expr": "up{job=\"copilot\"}",
+     "instant": true,
      "legendFormat": ""
     }
    ],
    "fieldConfig": {
     "defaults": {
      "unit": "none",
+     "noValue": "keine aktuellen Daten",
      "mappings": [
       {
        "type": "value",
@@ -162,23 +164,36 @@
         }
        }
       }
-     ]
+     ],
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "green",
+        "value": 1
+       }
+      ]
+     }
     },
     "overrides": []
    },
    "options": {
     "reduceOptions": {
      "calcs": [
-      "lastNotNull"
+      "last"
      ]
     },
-    "colorMode": "value",
+    "colorMode": "background",
     "graphMode": "none"
    }
   },
   {
-   "id": 5,
-   "title": "Index bereit",
+   "id": 4,
+   "title": "Twin erreichbar (aktuell)",
    "type": "stat",
    "gridPos": {
     "x": 16,
@@ -193,13 +208,15 @@
    "targets": [
     {
      "refId": "A",
-     "expr": "ecu_copilot_index_ready",
+     "expr": "ecu_copilot_twin_reachable",
+     "instant": true,
      "legendFormat": ""
     }
    ],
    "fieldConfig": {
     "defaults": {
      "unit": "none",
+     "noValue": "keine aktuellen Daten",
      "mappings": [
       {
        "type": "value",
@@ -214,27 +231,107 @@
         }
        }
       }
-     ]
+     ],
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "green",
+        "value": 1
+       }
+      ]
+     }
     },
     "overrides": []
    },
    "options": {
     "reduceOptions": {
      "calcs": [
-      "lastNotNull"
+      "last"
      ]
     },
-    "colorMode": "value",
+    "colorMode": "background",
+    "graphMode": "none"
+   }
+  },
+  {
+   "id": 5,
+   "title": "Index bereit (aktuell)",
+   "type": "stat",
+   "gridPos": {
+    "x": 20,
+    "y": 0,
+    "w": 4,
+    "h": 4
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "ecu_copilot_index_ready",
+     "instant": true,
+     "legendFormat": ""
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "none",
+     "noValue": "keine aktuellen Daten",
+     "mappings": [
+      {
+       "type": "value",
+       "options": {
+        "0": {
+         "text": "nein",
+         "color": "red"
+        },
+        "1": {
+         "text": "ja",
+         "color": "green"
+        }
+       }
+      }
+     ],
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "green",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "last"
+     ]
+    },
+    "colorMode": "background",
     "graphMode": "none"
    }
   },
   {
    "id": 6,
-   "title": "Antwortzeit, Mittel seit Start",
+   "title": "Antwortzeit, Mittel über gespeicherte Fragen",
    "type": "stat",
    "gridPos": {
-    "x": 20,
-    "y": 0,
+    "x": 0,
+    "y": 4,
     "w": 4,
     "h": 4
    },
@@ -266,13 +363,51 @@
    }
   },
   {
+   "id": 12,
+   "title": "Antworten über 300 s",
+   "type": "stat",
+   "gridPos": {
+    "x": 4,
+    "y": 4,
+    "w": 4,
+    "h": 4
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "ecu_copilot_latency_seconds_count - ignoring(le) ecu_copilot_latency_seconds_bucket{le=\"300\"}",
+     "legendFormat": ""
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "none",
+     "noValue": "keine aktuellen Daten"
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "colorMode": "value",
+    "graphMode": "none"
+   }
+  },
+  {
    "id": 7,
-   "title": "Antwortzeit p95 (gleitend, 1 h)",
+   "title": "Antwortzeit p95 (Schätzung aus Histogramm, gleitend 1 h)",
    "type": "timeseries",
    "gridPos": {
-    "x": 0,
+    "x": 8,
     "y": 4,
-    "w": 12,
+    "w": 16,
     "h": 8
    },
    "datasource": {
@@ -288,7 +423,7 @@
     {
      "refId": "B",
      "expr": "ecu_copilot_latency_seconds_sum / clamp_min(ecu_copilot_latency_seconds_count, 1)",
-     "legendFormat": "Mittel seit Start"
+     "legendFormat": "Mittel über gespeicherte Fragen"
     }
    ],
    "fieldConfig": {
@@ -309,8 +444,8 @@
    "title": "Token je Stunde",
    "type": "timeseries",
    "gridPos": {
-    "x": 12,
-    "y": 4,
+    "x": 0,
+    "y": 12,
     "w": 12,
     "h": 8
    },
@@ -343,7 +478,7 @@
    "title": "Werkzeugaufrufe gesamt",
    "type": "bargauge",
    "gridPos": {
-    "x": 0,
+    "x": 12,
     "y": 12,
     "w": 12,
     "h": 8
@@ -380,9 +515,9 @@
    "title": "Fragen je Stunde",
    "type": "timeseries",
    "gridPos": {
-    "x": 12,
-    "y": 12,
-    "w": 12,
+    "x": 0,
+    "y": 20,
+    "w": 24,
     "h": 8
    },
    "datasource": {
