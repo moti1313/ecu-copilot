@@ -4,7 +4,7 @@ health gauges. No client library, no network."""
 from ecu_copilot.copilot.metrics import LATENCY_BUCKETS_S, MetricsStore, QuestionRecord, prometheus_text
 
 
-def _rec(latency, cost=0.03, error=None, tools=("search_docs",), inp=1000, out=200, cached=500, cite_missing=False):
+def _rec(latency, cost=0.03, error=None, tools=("search_docs",), inp=1000, out=200, cached=500, cite_missing=False, created=0):
     return QuestionRecord(
         timestamp="2026-10-21T10:00:00+00:00",
         question="q",
@@ -13,7 +13,7 @@ def _rec(latency, cost=0.03, error=None, tools=("search_docs",), inp=1000, out=2
         latency_s=latency,
         iterations=2,
         tools=list(tools),
-        usage={"input_tokens": inp, "output_tokens": out, "cache_read_input_tokens": cached},
+        usage={"input_tokens": inp, "output_tokens": out, "cache_read_input_tokens": cached, "cache_creation_input_tokens": created},
         cost_usd=cost,
         citation_missing=cite_missing,
         error=error,
@@ -42,7 +42,9 @@ def test_counters_histogram_and_gauges():
     assert 'ecu_copilot_build_info{provider="openai",model="gpt-5",prompt_version="' in text
     assert abs(_value(text, "ecu_copilot_cost_usd_total") - 0.09) < 1e-9
     assert text.endswith("\n") and "# TYPE ecu_copilot_latency_seconds histogram" in text
-    assert len(LATENCY_BUCKETS_S) == 9
+    assert len(LATENCY_BUCKETS_S) == 11 and LATENCY_BUCKETS_S[-1] == 1200
+    assert 'ecu_copilot_latency_seconds_bucket{le="600"} 3' in text
+    assert 'ecu_copilot_tokens_total{kind="cache_creation"} 0' in text
 
 
 def test_empty_store_exposes_zeros_and_store_round_trip(tmp_path):
@@ -53,6 +55,11 @@ def test_empty_store_exposes_zeros_and_store_round_trip(tmp_path):
     store.record(_rec(12.5))
     again = MetricsStore(tmp_path / "m.jsonl")  # re-read from disk
     assert "ecu_copilot_questions_total 1" in prometheus_text(again.records(), {})
+
+
+def test_cache_creation_tokens_are_exported():
+    text = prometheus_text([_rec(1.0, created=700)], {})
+    assert 'ecu_copilot_tokens_total{kind="cache_creation"} 700' in text
 
 
 def test_label_values_are_escaped():

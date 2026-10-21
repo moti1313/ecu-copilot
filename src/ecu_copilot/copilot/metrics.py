@@ -110,7 +110,7 @@ def now_iso() -> str:
 # --- Prometheus exposition -----------------------------------------------------------------------
 # Text format for a Prometheus scrape. Recomputed from the appended records on every scrape, so the
 # counters are monotonic. No client library: the format is a handful of lines and stays dependency-free.
-LATENCY_BUCKETS_S = (5, 10, 20, 30, 60, 90, 120, 180, 300)
+LATENCY_BUCKETS_S = (5, 10, 20, 30, 60, 90, 120, 180, 300, 600, 1200)  # quantiles above the last finite bucket are clamped by Prometheus
 
 
 def _label(v: object) -> str:
@@ -140,6 +140,7 @@ def prometheus_text(records: list[QuestionRecord], health: dict | None = None) -
         "input": sum(r.usage.get("input_tokens", 0) for r in rs),
         "output": sum(r.usage.get("output_tokens", 0) for r in rs),
         "cache_read": sum(r.usage.get("cache_read_input_tokens", 0) for r in rs),
+        "cache_creation": sum(r.usage.get("cache_creation_input_tokens", 0) for r in rs),
     }
     metric("ecu_copilot_tokens_total", "counter", "Model tokens by kind", [(f'{{kind="{k}"}}', v) for k, v in tokens.items()])
     metric(
