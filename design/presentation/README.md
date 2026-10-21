@@ -1,8 +1,8 @@
 # ECU Copilot präsentieren
 
-**Einstieg:** [Präsentation als PDF](ECU-Copilot-Praesentation.pdf) · [Alle Folien auf einen Blick](Uebersicht.png) · [Sprechtext und Dashboard-Demo](SPRECHTEXT.md)
+**Einstieg:** [Präsentation als PDF](ECU-Copilot-Praesentation.pdf) · [Alle Folien auf einen Blick](Uebersicht.png)
 
-Neun visuelle Folien erklären den Prototyp: große Diagramme, kurze Beschriftungen und ein durchgehendes Beispiel. Weiß, Schwarz und Rostrot; die Erklärungen stehen im separaten Sprechtext. Umfang: etwa **5–7 Minuten Vortrag**, danach eine kurze Dashboard-Demo. Stand: 17.10.2026.
+Neun visuelle Folien erklären den Prototyp: große Diagramme, kurze Beschriftungen und ein durchgehendes Beispiel. Weiß, Schwarz und Rostrot; Umfang: etwa **5–7 Minuten Vortrag**, danach eine kurze Dashboard-Demo. Stand: 17.10.2026.
 
 **E-204 auf Folie 1 ist ein illustratives Beispiel:** 483 µA, Limit 450 µA und T1 35 °C. Diese Werte dienen der Erklärung und sind kein zitierter Benchmarkbefund. Benchmarkzahlen werden aus dem jeweiligen geprüften Lauf separat ergänzt.
 
@@ -41,7 +41,7 @@ python3 scripts/build_presentation.py
 
 Der Export benötigt **Matplotlib in diesem Python**, verwendet dessen nichtinteraktives Agg-Backend und erzeugt ausschließlich Dateien unter `design/presentation/`. Für die laufende Anwendung wird keine Abhängigkeit ergänzt. Der Generator kontaktiert weder Twin noch LLM und verändert keine Szenarien, Prompts oder Benchmarkmetriken.
 
-Der Export prüft, ob Text innerhalb der Folien und beschrifteten Karten bleibt. `manifest.json` enthält die Folienliste, den Git-Stand und SHA-256-Prüfsummen der herangezogenen Implementierungsdateien. Der Git-Stand ist der beim Export sichtbare HEAD; die Prüfsummen bezeichnen die tatsächlich gelesenen Dateien. Bei späteren Codeänderungen die Aussagen erneut abgleichen und exportieren.
+Der Export prüft, ob Text innerhalb der Folien und beschrifteten Karten bleibt, und schreibt eine Manifestdatei mit Folienliste, Git-Stand und SHA-256-Prüfsummen der herangezogenen Implementierungsdateien (nicht Teil dieses Repos).
 
 ## Was diese Unterlagen verbessern
 
