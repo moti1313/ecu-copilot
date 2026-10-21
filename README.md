@@ -200,4 +200,12 @@ references remain as recorded. See [publication notes](PUBLICATION.md).
 Additional historical technical notes are retained under `design/`; the implemented architecture and
 recorded outcomes linked above describe the current prototype.
 
+**Authorship and AI assistance.** The project was designed, decided and tested by Morteza Molaei. Two AI
+coding assistants were used as pair programmers and reviewers, and this is stated openly: Claude Code
+(Anthropic) wrote most of the code and documentation drafts under the author's direction and appears as
+co-author in the commit trailers; OpenAI Codex acted as an independent reviewer, reproduced several of the
+defects named in the result documents, and prepared this public copy of the repository. Where the documents
+say "review" or "reviewer", that is one of these two assistants or a human colleague. Every benchmark
+decision, every commit, the interpretation of the results and all paid model runs were the author's.
+
 Licensed under the [MIT License](LICENSE).
