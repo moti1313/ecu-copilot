@@ -94,3 +94,7 @@ Keine Entscheidung in `ARCHITECTURE.md` hängt von **Zahlen** aus einer nur im A
 - Feinjustierung kleiner Modelle (Sensor-Level, KG-HiL): nicht die Aufgabe eines Copilots mit Dokumentenzugriff; außerhalb des Zeitrahmens.
 - Asset Administration Shell vollständig: zu schwer; nur die Idee „maschinenlesbare Spezifikation mit Revision".
 - Fünf Agenten: siehe These 3.
+
+## 6. Ergänzende Recherche: Bildbelege und VLMs (21.10.2026)
+
+Für eine mögliche Erweiterung um Sichtbefunde wurden acht ausgewählte Kernarbeiten anhand ihrer Haupttexte ausgewertet: PatchCore, WinCLIP, AnomalyCLIP, AnomalyGPT, MMAD, Echo, MVTec AD 2 und TGAD. Methoden, Experimente, Grenzen, verwendete Fassungen und die gezielt gelesenen Anhangseiten stehen in der separaten [VLM-Literaturauswertung](vlm/RECHERCHE.md). Das [VLM-Konzept](vlm/KONZEPT.md) beschreibt eine begrenzte Montage-Sichtprüfung mit Bildreferenzen, Vergleichssystemen und eigenem Versuchsentwurf. Es ist nicht implementiert; aus dieser Recherche folgt keine Verbesserung der bisherigen Diagnoseergebnisse. Die neue Auswertung ersetzt oder bestätigt die älteren, oben dokumentierten Quellenprüfungen nicht.
