@@ -69,6 +69,28 @@ uv run uvicorn ecu_copilot.copilot.api:app --port 8000       # terminal 2 (needs
 Try it: click **Temperaturdrift St. 2**, wait a minute, ask
 *"Warum fällt Variante B an Station 2 seit 10 Minuten überdurchschnittlich oft durch?"*
 
+### First investigation in five minutes
+
+Without an API key the stack still starts: the dashboard shows the three stations and their live
+tests, faults can be injected, and the offline tests run. Only `/ask` needs a model key.
+
+1. Open the dashboard at http://localhost:8000 and let the simulator run for a minute.
+2. In the panel *Demo-Störung · Betreiberwissen* inject a temperature drift on station 2 (default +10 °C).
+   The agent has no tool for this panel; it has to infer the fault from measurements.
+3. Wait two to three minutes. Variant B on station 2 starts failing with E-204 (quiescent current),
+   variant A barely, because B sits closer to its limit.
+4. Ask, for example: *Why does variant B on station 2 fail more often since a few minutes? Unit defect
+   or test conditions?* The tool calls appear while the agent works (one to three minutes with gpt-5).
+5. Read the report: one assessment per group (test validity separate from unit-defect indication),
+   consistency marks if any, evidence with provenance ✓/✗, and a proposed counter-check. Expected for
+   this fault: *test invalid (temperature), unit not assessable, cause station temperature*. An invalid
+   test leaves the unit condition open; it does not clear the unit.
+6. Open the same question as a trace in Jaeger (http://localhost:16686): one span per model call and
+   per tool call. Reset the faults in the dashboard afterwards.
+
+A second scenario: reset, inject a bad connector lot, ask about the E-120 failures on variant B. Here
+the agent has to find a real defect concentrated in one lot rather than an environmental cause.
+
 ## Tests and evals
 
 ```bash
