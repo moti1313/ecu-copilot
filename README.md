@@ -142,6 +142,25 @@ All test data comes from the digital twin and the documents are synthetic; the U
 Two more faults are built in: hall noise (E-310 above 45 dB(A), spec §6.1) and a bad connector lot
 (E-120 clustered on lot L2439-07, FMEA item 7) - a *real* failure the agent must not explain away.
 
+## Monitoring
+
+Per question the Copilot records latency, model calls, tools, tokens, calculated cost and errors
+(`data/metrics.jsonl`, summarised at `/metrics`). The same figures are exposed for Prometheus at
+`/metrics/prometheus` (counters, a latency histogram, Twin and index gauges; no client library).
+Traces per model call and tool call stay in Jaeger. An optional overlay adds Prometheus and Grafana
+with a provisioned dashboard:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
+# Prometheus http://localhost:9090 · Grafana http://localhost:3000 (anonymous viewer)
+# ports taken by another stack: PROMETHEUS_PORT=9091 GRAFANA_PORT=3001 docker compose ... up -d
+```
+
+The dashboard answers operational questions over time: how long answers take (mean and rolling p95),
+how many fail, how tokens and calculated cost develop, which tools are used, and whether Twin and
+document index are up. It says nothing about whether a diagnosis is correct; that remains the
+benchmark's job.
+
 ## CI, release and deploy
 
 Every push runs `.github/workflows/ci.yml`: `ruff check`, `ruff format --check`, the offline tests
