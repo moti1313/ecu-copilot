@@ -10,7 +10,24 @@ permissions:
   packages: write
 
 jobs:
+  checks:
+    # the same lint and offline tests as ci.yml, on exactly the tagged commit - publishing depends on them
+    runs-on: ubuntu-latest
+    env:
+      RAG_MODE: bm25
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.13.1"
+          enable-cache: true
+      - run: uv sync --frozen
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run pytest
+
   image:
+    needs: checks
     runs-on: ubuntu-latest
     env:
       IMAGE: ghcr.io/${{ github.repository }}
