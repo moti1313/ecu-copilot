@@ -102,6 +102,19 @@ those flags did not repair the S05 reports (0/3) and left eight correct control 
 no revision loop is part of the agent. No diagnostic advantage over rules was demonstrated on these
 known patterns. Engineer time savings and performance on production data remain unmeasured.
 
+## Scope of the local demo
+
+This is a single-host engineering demonstrator, not a shared service.
+
+- **Deliberate gaps, to be closed before any shared deployment:** no authentication on
+  the Copilot and Twin APIs, including `/ask`, `/decisions`, `/faults` and `/reset`; CORS open on the Twin; Compose
+  publishes ports on all interfaces, not only `127.0.0.1`; the mapping investigation → decision lives in process
+  memory, so after a restart a decision for an older investigation is rejected with 404 although the record is
+  still in `investigations.jsonl`; `/health` returns HTTP 200 with `status: ok` even when the Twin is unreachable
+  (liveness and readiness are not separated; the smoke tests check the individual fields); traces may contain
+  prompt and answer content (`ANTHROPIC_OPEN_TELEMETRY_TRACES_CONTENT_MODE=content`), which needs redaction,
+  access control and retention rules with real data. None of these change the benchmark results.
+
 ## Offline checks
 
 ```bash
