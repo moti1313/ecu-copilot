@@ -1,0 +1,11 @@
+# Scrapes the Copilot's Prometheus exposition (see src/ecu_copilot/copilot/metrics.py::prometheus_text).
+global:
+  scrape_interval: 15s
+scrape_configs:
+  - job_name: copilot
+    metrics_path: /metrics/prometheus
+    static_configs:
+      - targets: ["copilot:8000"]
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
