@@ -40,8 +40,15 @@ jobs:
             sleep 3
           done
           cat /tmp/health.json; echo
-          grep -q '"twin_reachable":true' /tmp/health.json && grep -q '"index_ready":true' /tmp/health.json
-          docker compose -f docker-compose.yml -f docker-compose.release.yml down -v
+          grep -q '"status":"ok"' /tmp/health.json
+          grep -q '"twin_reachable":true' /tmp/health.json
+          grep -q '"index_ready":true' /tmp/health.json
+      - name: show logs on failure
+        if: failure()
+        run: docker compose -f docker-compose.yml -f docker-compose.release.yml logs --tail 60
+      - name: stop smoke stack
+        if: always()
+        run: docker compose -f docker-compose.yml -f docker-compose.release.yml down -v
       - name: publish
         run: |
           docker push "$IMAGE:${{ github.ref_name }}"
