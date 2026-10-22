@@ -1,0 +1,25 @@
+{
+  "note": "Retrieval golden set: engineer questions mapped to the document sections that answer them. Any listed citation counts as relevant. Used by evals/retrieval_eval.py; validated by tests/test_retrieval_eval.py against the chunked docs.",
+  "items": [
+    {"id": "q01", "query": "quiescent current limit for variant B", "relevant": ["TS-DCU-EOL §5", "TS-DCU-EOL §4.3"]},
+    {"id": "q02", "query": "valid PCB temperature window for a measurement", "relevant": ["TS-DCU-EOL §4.2"]},
+    {"id": "q03", "query": "sleep current increases with temperature leakage", "relevant": ["DS-MCU-XM32F7 §7.3"]},
+    {"id": "q04", "query": "failure code E-204 meaning and first check", "relevant": ["TS-DCU-EOL §7", "WI-EOL-PSEUDO §3"]},
+    {"id": "q05", "query": "E-120 no LIN communication connector J3", "relevant": ["TS-DCU-EOL §7", "FMEA-DCU-B2 §3", "TS-DCU-EOL §4.1"]},
+    {"id": "q06", "query": "acoustic test background noise limit dB(A)", "relevant": ["TS-DCU-EOL §6.1"]},
+    {"id": "q07", "query": "definition of a pseudo failure", "relevant": ["WI-EOL-PSEUDO §2", "FMEA-DCU-B2 §4"]},
+    {"id": "q08", "query": "procedure when the failure rate rises", "relevant": ["WI-EOL-PSEUDO §4", "WI-EOL-PSEUDO §1"]},
+    {"id": "q09", "query": "8D report minimum content disciplines", "relevant": ["WI-EOL-PSEUDO §5"]},
+    {"id": "q10", "query": "retest and escalation after a failed unit", "relevant": ["TS-DCU-EOL §8"]},
+    {"id": "q11", "query": "firmware flash over LIN time limit E-401", "relevant": ["TS-DCU-EOL §4.5"]},
+    {"id": "q12", "query": "HB4821 end of life successor HB4830", "relevant": ["PCN-2026-017 §1"]},
+    {"id": "q13", "query": "H-bridge thermal shutdown junction temperature", "relevant": ["DS-DRV-HB4821 §4.2"]},
+    {"id": "q14", "query": "operating current window lift motor run", "relevant": ["TS-DCU-EOL §4.4"]},
+    {"id": "q15", "query": "typical mistakes blocking units at the first rate increase", "relevant": ["WI-EOL-PSEUDO §6"]},
+    {"id": "q16", "query": "which station tests which variant", "relevant": ["TS-DCU-EOL §2"]},
+    {"id": "q17", "query": "connector lot pin length below tolerance", "relevant": ["FMEA-DCU-B2 §3"]},
+    {"id": "q18", "query": "test sequence order first failing test stops", "relevant": ["TS-DCU-EOL §3"]},
+    {"id": "q19", "query": "Warum steigt der Ruhestrom mit der Temperatur?", "relevant": ["DS-MCU-XM32F7 §7.3", "TS-DCU-EOL §4.2"]},
+    {"id": "q20", "query": "Grenzwert Ruhestrom DCU-B2", "relevant": ["TS-DCU-EOL §5", "TS-DCU-EOL §4.3"]}
+  ]
+}

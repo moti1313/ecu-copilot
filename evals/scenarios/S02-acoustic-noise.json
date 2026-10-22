@@ -1,0 +1,63 @@
+{
+  "id": "S02-acoustic-noise",
+  "title": "Hallenlärm an Station 2 – Pseudo-Fehler E-310 bei beiden Varianten",
+  "question": "An Station 2 fallen seit einigen Minuten auffällig viele Einheiten im Akustiktest durch (E-310), bei Variante A und B. Sind die Getriebe schlecht oder stimmt etwas mit der Prüfzelle nicht?",
+  "scope": {
+    "station": 2
+  },
+  "setup": [
+    {
+      "type": "acoustic_noise",
+      "station": 2,
+      "noise_db": 57.0
+    }
+  ],
+  "settle_s": 240,
+  "truth": {
+    "assessments": [
+      {
+        "scope": {
+          "station": 2
+        },
+        "test_validity": "invalid_noise",
+        "defect_indication": "none_assessable",
+        "root_cause": "cell_noise"
+      }
+    ],
+    "finding": "pseudo_failure",
+    "components_any": [
+      "MIC",
+      "MOTOR",
+      "FIXTURE"
+    ],
+    "required_tools": [
+      "check_validity"
+    ],
+    "must_cite_any": [
+      "TS-DCU-EOL §6.1",
+      "TS-DCU-EOL 6.1",
+      "FMEA-DCU-B2 12",
+      "WI-EOL-PSEUDO 3"
+    ],
+    "next_test_keywords_any": [
+      "Lärm",
+      "Mikrofon",
+      "dB",
+      "Geräusch",
+      "noise",
+      "Wiederhol",
+      "re-test",
+      "erneut"
+    ],
+    "block_units": false,
+    "abstain_expected": false
+  },
+  "solvability": {
+    "check": "validity_share",
+    "station": 2,
+    "code": "E-310",
+    "min_invalid_share_pct": 70,
+    "min_failures": 8
+  },
+  "note": "Gegenbeispiel zu S01: gleiche Struktur (Umgebung macht Prüfung ungültig), anderer Messpfad (Mikrofon statt T1), beide Varianten betroffen. Prüft, ob die Umgebungsregel nicht nur auf Temperatur passt. Kalibrierung nach dem ersten B0-Lauf (21.10., 150 s: 18 E-310-Fehler, 78 % ungültig): Einschwingzeit 240 s und Mindestanteil 70 %, weil ein Teil der E-310-Fehler die normale Getriebe-Grundrate ist und nicht lärmbedingt; vor jedem bezahlten Lauf festgelegt. Komponenten: MIC (Referenzmikrofon der Zelle) ist der betroffene Prüfpfad und zählt als korrekt; MOTOR/FIXTURE bleiben zulässig (Review 22.10.)."
+}

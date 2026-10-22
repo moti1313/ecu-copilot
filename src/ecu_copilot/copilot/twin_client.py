@@ -9,7 +9,8 @@ from .. import config
 
 class TwinClient:
     def __init__(self, base_url: str | None = None, timeout: float = 5.0) -> None:
-        self._client = httpx.Client(base_url=base_url or config.TWIN_URL, timeout=timeout)
+        headers = {"X-API-Key": config.TWIN_API_KEY} if config.TWIN_API_KEY else {}
+        self._client = httpx.Client(base_url=base_url or config.TWIN_URL, timeout=timeout, headers=headers)
 
     def health(self) -> dict:
         return self._client.get("/health").raise_for_status().json()

@@ -17,6 +17,7 @@ from opentelemetry import trace
 
 from .. import config
 from ..rag.index import DocumentIndex
+from ..rag.injection import annotate_hits
 from .twin_client import TwinClient
 
 tracer = trace.get_tracer("ecu-copilot.tools")
@@ -82,7 +83,7 @@ def search_docs(query: str, k: int = 5) -> str:
         except FileNotFoundError as e:
             return _error(str(e))
         span.set_attribute("hits", len(hits))
-        return _dumps([{k_: v for k_, v in h.items() if k_ != "score"} for h in hits])
+        return _dumps(annotate_hits([{k_: v for k_, v in h.items() if k_ != "score"} for h in hits]))  # flags suspicious passages
 
 
 @beta_tool

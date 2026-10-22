@@ -1,6 +1,9 @@
 # Scrapes the Copilot's Prometheus exposition (see src/ecu_copilot/copilot/metrics.py::prometheus_text).
 global:
   scrape_interval: 15s
+  evaluation_interval: 30s
+rule_files:
+  - /etc/prometheus/alerts.yml
 scrape_configs:
   - job_name: copilot
     metrics_path: /metrics/prometheus

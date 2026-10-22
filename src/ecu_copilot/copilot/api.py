@@ -1,7 +1,7 @@
 """Copilot service. Run with:  uvicorn ecu_copilot.copilot.api:app --port 8000
 
 Endpoints: POST /ask, GET /bom, POST /decisions, GET /decisions, GET /metrics, GET /metrics/recent,
-GET /health, GET /config, GET / (investigation workspace).
+GET /health (compat), GET /health/live, GET /health/ready, GET /config, GET / (investigation workspace).
 """
 
 from __future__ import annotations
@@ -12,7 +12,7 @@ import uuid
 from collections.abc import AsyncIterator
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException, Response
 from fastapi.responses import FileResponse, PlainTextResponse
 from opentelemetry import trace
 from pydantic import BaseModel, Field
@@ -44,6 +44,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     state["copilot"] = make_copilot(metrics=metrics, tracer_provider=provider)
     state["metrics"] = metrics
     state["index"] = index
+    state["investigations"] = _load_investigations()
     print(
         f"[copilot] ready: provider={config.LLM_PROVIDER} model={config.AGENT_MODEL} rag={index.mode} "
         f"twin={config.TWIN_URL} otel={config.OTEL_ENDPOINT}"
@@ -54,6 +55,12 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 app = FastAPI(title="ECU Copilot", version="0.2.0", lifespan=lifespan)
 tracer = trace.get_tracer("ecu-copilot.api")
+
+
+def require_api_key(x_api_key: str | None = Header(default=None)) -> None:
+    """Optional: enforced only when ECU_API_KEY is set. Protects the paid and the state-changing endpoints."""
+    if config.ECU_API_KEY and x_api_key != config.ECU_API_KEY:
+        raise HTTPException(status_code=401, detail="missing or invalid X-API-Key")
 
 
 class AskRequest(BaseModel):
@@ -68,6 +75,40 @@ class Decision(BaseModel):
     decision: str = Field(pattern="^(approve_test|block_units|reject|request_8d)$")
     note: str = Field(default="", max_length=2000)
     engineer: str = Field(default="", max_length=120)
+
+
+def _load_investigations() -> dict[str, dict]:
+    """Rebuild the id -> investigation mapping from the append-only file, so decisions survive a restart.
+
+    Recovery rule (review R4): a line that does not parse is skipped and counted, never fatal. A truncated LAST
+    line is the expected result of an interrupted append; a corrupt line in the middle is reported the same way
+    but is not expected. The count is exposed in /health as `investigations_corrupt_lines`."""
+    state["investigations_corrupt_lines"] = 0
+    if not INVESTIGATIONS_FILE.exists():
+        return {}
+    out: dict[str, dict] = {}
+    # bytes, not text: an append interrupted inside a multi-byte character must not raise UnicodeDecodeError here
+    raw_lines = INVESTIGATIONS_FILE.read_bytes().split(b"\n")
+    for n, raw in enumerate(raw_lines, start=1):
+        if not raw.strip():
+            continue
+        try:
+            rec = json.loads(raw.decode("utf-8"))
+            out[rec["investigation_id"]] = rec
+        except (ValueError, KeyError, TypeError, UnicodeDecodeError):
+            state["investigations_corrupt_lines"] += 1
+            where = "truncated last line" if n == len(raw_lines) else f"corrupt line {n}"
+            print(f"[copilot] WARNING investigations.jsonl: {where} skipped ({len(out)} records loaded so far)")
+    return out
+
+
+def _find_investigation(inv_id: str) -> dict | None:
+    """Memory first; on a miss re-read the file (another process or a restart may have written it)."""
+    inv = state["investigations"].get(inv_id)
+    if inv is None:
+        state["investigations"].update(_load_investigations())
+        inv = state["investigations"].get(inv_id)
+    return inv
 
 
 def _store_investigation(question: str, result) -> str:
@@ -87,12 +128,25 @@ def _store_investigation(question: str, result) -> str:
     }
     state["investigations"][inv_id] = record
     INVESTIGATIONS_FILE.parent.mkdir(parents=True, exist_ok=True)
-    with INVESTIGATIONS_FILE.open("a", encoding="utf-8") as f:
-        f.write(json.dumps(record, ensure_ascii=False) + "\n")
+    _append_jsonl(INVESTIGATIONS_FILE, record)
     return inv_id
 
 
-@app.post("/ask")
+def _append_jsonl(path: Path, record: dict) -> None:
+    """Append one JSON line. If the file does not end with a newline (an earlier append was interrupted), terminate
+    that fragment first, so the new record is never glued to it and lost on the next load (review round 2)."""
+    needs_newline = False
+    if path.exists() and path.stat().st_size > 0:
+        with path.open("rb") as r:  # append mode cannot read; check the last byte separately
+            r.seek(-1, 2)
+            needs_newline = r.read(1) != b"\n"
+    with path.open("ab") as f:
+        if needs_newline:
+            f.write(b"\n")
+        f.write(json.dumps(record, ensure_ascii=False).encode("utf-8") + b"\n")
+
+
+@app.post("/ask", dependencies=[Depends(require_api_key)])
 def ask(req: AskRequest) -> dict:
     with tracer.start_as_current_span("ask") as span:
         span.set_attribute("question", req.question[:200])
@@ -113,9 +167,9 @@ def bom() -> dict:
     return json.loads(path.read_text(encoding="utf-8")) if path.exists() else {"parts": []}
 
 
-@app.post("/decisions", status_code=201)
+@app.post("/decisions", status_code=201, dependencies=[Depends(require_api_key)])
 def add_decision(d: Decision) -> dict:
-    inv = state["investigations"].get(d.investigation_id)
+    inv = _find_investigation(d.investigation_id)
     if inv is None:
         raise HTTPException(status_code=404, detail="unknown investigation_id - decisions must refer to a stored investigation")
     record = {
@@ -128,8 +182,7 @@ def add_decision(d: Decision) -> dict:
         "effect": "recorded_only",  # phase 2 adds retest / blocking; until then the UI must say exactly this
     }
     DECISIONS_FILE.parent.mkdir(parents=True, exist_ok=True)
-    with DECISIONS_FILE.open("a", encoding="utf-8") as f:
-        f.write(json.dumps(record, ensure_ascii=False) + "\n")
+    _append_jsonl(DECISIONS_FILE, record)
     return record
 
 
@@ -157,20 +210,42 @@ def metrics_prometheus() -> str:
     return prometheus_text(state["metrics"].records(), health())
 
 
-@app.get("/health")
-def health() -> dict:
+def _health_snapshot() -> dict:
     twin_ok = True
     try:
         tools._get_twin().health()
     except Exception:  # noqa: BLE001
         twin_ok = False
+    index_ready = bool(state.get("index") is not None and state["index"].ready)
     return {
-        "status": "ok",
+        "status": "ok" if (twin_ok and index_ready) else "degraded",
         "twin_reachable": twin_ok,
-        "index_ready": state["index"].ready,
+        "index_ready": index_ready,
         "provider": config.LLM_PROVIDER,
         "model": config.AGENT_MODEL,
+        "investigations_corrupt_lines": int(state.get("investigations_corrupt_lines", 0) or 0),
     }
+
+
+@app.get("/health")
+def health() -> dict:
+    """Compatibility endpoint: always HTTP 200 with the detailed fields; `status` is ok or degraded."""
+    return _health_snapshot()
+
+
+@app.get("/health/live")
+def health_live() -> dict:
+    """Liveness: the process answers. Never depends on the Twin or the index."""
+    return {"status": "alive"}
+
+
+@app.get("/health/ready")
+def health_ready(response: Response) -> dict:
+    """Readiness: 200 only when the Twin is reachable and the index is loaded, otherwise 503 with the reason."""
+    snap = _health_snapshot()
+    if snap["status"] != "ok":
+        response.status_code = 503
+    return snap
 
 
 @app.get("/config")
@@ -182,6 +257,8 @@ def ui_config() -> dict:
         "model": config.AGENT_MODEL,
         "rag_mode": config.RAG_MODE,
         "prompt_version": config.PROMPT_VERSION,
+        "auth_required": bool(config.ECU_API_KEY),  # the UI then asks for the key once and sends X-API-Key
+        "twin_auth_required": bool(config.TWIN_API_KEY),
     }
 
 

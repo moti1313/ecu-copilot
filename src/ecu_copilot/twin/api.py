@@ -6,7 +6,7 @@ import asyncio
 import contextlib
 from collections.abc import AsyncIterator
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
@@ -48,6 +48,12 @@ app = FastAPI(
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
+def require_key(x_api_key: str | None = Header(default=None)) -> None:
+    """Optional: enforced only when TWIN_API_KEY is set. Fault injection and reset change the shared simulation."""
+    if config.TWIN_API_KEY and x_api_key != config.TWIN_API_KEY:
+        raise HTTPException(status_code=401, detail="missing or invalid X-API-Key")
+
+
 @app.get("/health")
 def health() -> dict:
     return {"status": "ok", "results": len(sim._results), "active_faults": len(sim.faults())}
@@ -79,26 +85,26 @@ def faults() -> list[ActiveFault]:
     return sim.faults()
 
 
-@app.post("/faults", response_model=ActiveFault, status_code=201)
+@app.post("/faults", response_model=ActiveFault, status_code=201, dependencies=[Depends(require_key)])
 def add_fault(fault: Fault) -> ActiveFault:
     if hasattr(fault, "station") and fault.station not in {s.station for s in STATIONS}:
         raise HTTPException(status_code=404, detail=f"station {fault.station} does not exist")
     return sim.add_fault(fault)
 
 
-@app.delete("/faults")
+@app.delete("/faults", dependencies=[Depends(require_key)])
 def clear_faults() -> dict:
     return {"cleared": sim.clear_faults()}
 
 
-@app.post("/reset")
+@app.post("/reset", dependencies=[Depends(require_key)])
 def reset(seed: int = 42, history_minutes: int = Query(default=30, ge=0, le=240)) -> dict:
     """Clean, reproducible state: no faults, fresh seeded history. Used by the benchmark between scenarios."""
     n = sim.reset(seed=seed, history_minutes=history_minutes, interval_s=config.TWIN_INTERVAL_S)
     return {"reset": True, "seed": seed, "seeded_results": n}
 
 
-@app.delete("/faults/{fault_id}")
+@app.delete("/faults/{fault_id}", dependencies=[Depends(require_key)])
 def delete_fault(fault_id: int) -> dict:
     if not sim.clear_faults(fault_id):
         raise HTTPException(status_code=404, detail="fault not found")

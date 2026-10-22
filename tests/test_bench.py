@@ -302,3 +302,54 @@ def test_summary_separates_regular_and_exploratory_runs():
     assert "| B0 | 100 % | 100 % |" in head  # the regular table is unaffected by the two failed exploratory runs
     assert "| S08w (E)" in text and "| S05 (E)" in text  # per-scenario table is a real table, one row per scenario
     assert "\n|\n" not in text  # regression: _per_scenario once returned a string and the table came out one char per line
+
+
+def _report_with(assessments, finding="pseudo_failure"):
+    from ecu_copilot.copilot.agent import AskResult, parse_report
+
+    r = AskResult(answer="x")
+    r.report = parse_report(
+        json.dumps(
+            {
+                "answer_markdown": "x",
+                "finding": finding,
+                "hypotheses": [],
+                "evidence": [],
+                "next_test": None,
+                "affected_components": ["T1"],
+                "assessments": assessments,
+            }
+        )
+    )
+    return r
+
+
+def test_scorer_matches_two_causes_in_the_same_scope(bm25_index):
+    """Review R1: with two expected causes in one scope the old scorer compared both to the first answer row (max 1/2)."""
+    s06 = json.loads((SCENARIO_DIR / "S06-sensor-and-heat.json").read_text())
+    truth = s06["truth"]["assessments"]
+    a_temp = {
+        "scope": {"station": 2, "variant": "B", "lot": None},
+        **{k: truth[0][k] for k in ("test_validity", "defect_indication", "root_cause")},
+    }
+    a_sens = {
+        "scope": {"station": 2, "variant": "B", "lot": None},
+        **{k: truth[1][k] for k in ("test_validity", "defect_indication", "root_cause")},
+    }
+    spec = load_spec()
+    for order in ([a_temp, a_sens], [a_sens, a_temp]):
+        s = score(s06, _report_with(order), bm25_index._chunks, spec)
+        assert s["assessments_matched"] == "2/2" and s["assessments_exact"], order
+    # missing second cause -> 1/2 in BOTH directions; a duplicate of the first row does not substitute for the missing one
+    assert score(s06, _report_with([a_temp]), bm25_index._chunks, spec)["assessments_matched"] == "1/2"
+    assert score(s06, _report_with([a_sens]), bm25_index._chunks, spec)["assessments_matched"] == "1/2"  # review round 2
+    assert score(s06, _report_with([a_temp, dict(a_temp)]), bm25_index._chunks, spec)["assessments_matched"] == "1/2"
+    # a wrong extra cause blocks exactness even when both expected rows are present
+    extra = {
+        "scope": {"station": 2, "variant": "B", "lot": None},
+        "test_validity": "valid",
+        "defect_indication": "suspected",
+        "root_cause": "component_u1",
+    }
+    s = score(s06, _report_with([a_temp, a_sens, extra]), bm25_index._chunks, spec)
+    assert s["assessments_matched"] == "2/2" and not s["assessments_exact"] and s["extra_assessments"] == 1

@@ -1,0 +1,86 @@
+{
+  "id": "S06-sensor-and-heat",
+  "title": "Sensorfehler UND echte Erwärmung an Station 2 – berechtigter Mehrfachbefund",
+  "question": "An Station 2 meldet T1 seit einigen Minuten deutlich über 32 °C und Variante B fällt häufiger mit E-204 durch. Ist die Temperaturanzeige vertrauenswürdig, und sind die Prüfungen ungültig?",
+  "scope": {
+    "station": 2,
+    "variant": "B"
+  },
+  "setup": [
+    {
+      "type": "temperature_drift",
+      "station": 2,
+      "delta_c": 10,
+      "ramp_s": 0
+    },
+    {
+      "type": "sensor_offset",
+      "station": 2,
+      "offset_c": 9.0
+    }
+  ],
+  "settle_s": 300,
+  "truth": {
+    "assessments": [
+      {
+        "scope": {
+          "station": 2,
+          "variant": "B"
+        },
+        "test_validity": "invalid_temperature",
+        "defect_indication": "none_assessable",
+        "root_cause": "station_temperature"
+      },
+      {
+        "scope": {
+          "station": 2,
+          "variant": "B"
+        },
+        "test_validity": "unknown",
+        "defect_indication": "none",
+        "root_cause": "sensor_t1"
+      }
+    ],
+    "finding": "pseudo_failure",
+    "components_any": [
+      "T1",
+      "U1"
+    ],
+    "required_tools": [
+      "check_validity",
+      "describe_signal"
+    ],
+    "must_cite_any": [
+      "TS-DCU-EOL §4.2",
+      "TS-DCU-EOL 4.2",
+      "DS-MCU-XM32F7 7.3"
+    ],
+    "next_test_keywords_any": [
+      "Referenz",
+      "Thermometer",
+      "Sensor",
+      "Abkühl",
+      "cool",
+      "Wiederhol",
+      "re-test"
+    ],
+    "block_units": false,
+    "abstain_expected": false
+  },
+  "solvability": {
+    "check": "validity_share",
+    "station": 2,
+    "variant": "B",
+    "code": "E-204",
+    "min_invalid_share_pct": 80,
+    "min_failures": 8
+  },
+  "note": "Gegenbeispiel aus CONCEPT §11/§12: Sensorfehler und reale Übertemperatur gleichzeitig. Die physische Temperatur steigt wirklich (Ruhestrom folgt), die Anzeige liegt zusätzlich 9 K zu hoch. Zwei Bewertungen im selben Geltungsbereich sind hier berechtigt; K3 darf als Prüfhinweis erscheinen, K1 nicht als Fehler gewertet werden. Erwartet wird, dass weder die Übertemperatur weggeredet noch der Sensor für gesund erklärt wird. Kalibrierung nach dem ersten B0-Lauf (21.10., 240 s: nur 5 E-204-Fehler im 10-Minuten-Fenster, 100 % ungültig): Einschwingzeit 300 s. Beobachtung aus diesem Lauf: B0 bewertet nur die Temperatur (1/2), den Sensorfehler nicht, weil die reale Erwärmung die Entkopplung Iq↔T1 verdeckt; das ist ein Muster ohne passende Regel. Konsistenzvertrag: siehe expected_consistency_marks.",
+  "expected_consistency_marks": {
+    "note": "Dokumentation, nicht bewertet. Die Musterlösung (invalid_temperature/none_assessable/station_temperature + unknown/none/sensor_t1) erzeugt KEINE Marke: K1 schweigt, weil describe_signal iq_follows_t1 liefert (Strompfad stützt die Erwärmung), K3 setzt einen Bauteilverdacht (suspected/strong) voraus, den die Musterlösung nicht enthält. Behauptet eine Antwort zusätzlich einen Bauteilverdacht im selben Geltungsbereich, sind K2/K3 als Prüfhinweis zu erwarten.",
+    "expected": [],
+    "not_expected": [
+      "K1"
+    ]
+  }
+}

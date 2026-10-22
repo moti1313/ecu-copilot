@@ -1,0 +1,50 @@
+# Alert rules for the Copilot. Loaded by Prometheus (rule_files in prometheus.yml); visible under Alerts in the
+# Prometheus UI. No Alertmanager is wired in the local demo - routing to mail or chat is a deployment decision.
+groups:
+  - name: ecu-copilot
+    rules:
+      - alert: CopilotScrapeDown
+        expr: up{job="copilot"} == 0
+        for: 2m
+        labels: {severity: critical}
+        annotations:
+          summary: "Copilot is not answering scrapes"
+          description: "Prometheus could not scrape /metrics/prometheus for 2 minutes."
+      - alert: TwinUnreachable
+        expr: ecu_copilot_twin_reachable == 0
+        for: 2m
+        labels: {severity: critical}
+        annotations:
+          summary: "Copilot cannot reach the Twin"
+          description: "Investigations will fail at the first live tool call."
+      - alert: IndexNotReady
+        expr: ecu_copilot_index_ready == 0
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: "Document index not loaded"
+      - alert: HighErrorRatio
+        expr: increase(ecu_copilot_errors_total[1h]) / clamp_min(increase(ecu_copilot_questions_total[1h]), 1) > 0.2
+        for: 10m
+        labels: {severity: warning}
+        annotations:
+          summary: "More than 20 % of questions in the last hour ended in an error"
+      - alert: SlowAnswersP95
+        expr: histogram_quantile(0.95, sum(rate(ecu_copilot_latency_seconds_bucket[1h])) by (le)) > 300
+        for: 15m
+        labels: {severity: warning}
+        annotations:
+          summary: "Estimated p95 answer latency above 300 s"
+          description: "Histogram estimate; answers above the last finite bucket (1200 s) are clamped."
+      - alert: ToolErrorsRising
+        expr: increase(ecu_copilot_tool_errors_total[1h]) > 3
+        for: 10m
+        labels: {severity: warning}
+        annotations:
+          summary: "Tool calls returning errors in the last hour"
+      - alert: CostBurnHigh
+        expr: increase(ecu_copilot_cost_usd_total[24h]) > 20
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: "Calculated model cost above 20 USD in 24 h"

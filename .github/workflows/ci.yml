@@ -60,6 +60,8 @@ jobs:
           cat /tmp/health.json; echo
           grep -q '"twin_reachable":true' /tmp/health.json
           grep -q '"index_ready":true' /tmp/health.json
+          curl -fsS -o /dev/null -w '%{http_code}\n' http://localhost:8000/health/ready | grep -q '^200$'
+          curl -fsS http://localhost:8000/health/live | grep -q alive
           curl -fsS http://localhost:8001/faults | grep -q '^\[\]$'
           curl -fsS http://localhost:8000/metrics/prometheus -o /tmp/metrics.txt
           grep -q '^ecu_copilot_questions_total ' /tmp/metrics.txt
@@ -68,3 +70,47 @@ jobs:
         run: docker compose logs --tail 60
       - if: always()
         run: docker compose down -v
+
+  security:
+    needs: lint-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.13.1"
+      - name: dependency audit (report only until the findings are triaged; see design/ROADMAP.md)
+        continue-on-error: true
+        run: |
+          uv export --frozen --no-dev --no-emit-project --format requirements-txt > /tmp/requirements.txt
+          mkdir -p scan && uvx pip-audit -r /tmp/requirements.txt --strict -f json -o scan/pip-audit.json; echo "pip-audit exit $?"
+          uvx pip-audit -r /tmp/requirements.txt || true
+      - name: build image for scanning
+        run: docker build -t ecu-copilot:scan .
+      - name: image scan (report only until the findings are triaged; HIGH/CRITICAL with a fix)
+        continue-on-error: true
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ecu-copilot:scan
+          format: json
+          output: scan/trivy.json
+          exit-code: "1"
+          ignore-unfixed: true
+          severity: HIGH,CRITICAL
+      - name: image scan summary (table, informational)
+        if: always()
+        continue-on-error: true
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ecu-copilot:scan
+          format: table
+          ignore-unfixed: true
+          severity: HIGH,CRITICAL
+          skip-setup-trivy: true
+      - name: keep scan results (machine-readable, 30 days)
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: security-scans
+          path: scan/
+          retention-days: 30

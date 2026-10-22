@@ -106,14 +106,11 @@ known patterns. Engineer time savings and performance on production data remain 
 
 This is a single-host engineering demonstrator, not a shared service.
 
-- **Deliberate gaps, to be closed before any shared deployment:** no authentication on
-  the Copilot and Twin APIs, including `/ask`, `/decisions`, `/faults` and `/reset`; CORS open on the Twin; Compose
-  publishes ports on all interfaces, not only `127.0.0.1`; the mapping investigation → decision lives in process
-  memory, so after a restart a decision for an older investigation is rejected with 404 although the record is
-  still in `investigations.jsonl`; `/health` returns HTTP 200 with `status: ok` even when the Twin is unreachable
-  (liveness and readiness are not separated; the smoke tests check the individual fields); traces may contain
-  prompt and answer content (`ANTHROPIC_OPEN_TELEMETRY_TRACES_CONTENT_MODE=content`), which needs redaction,
-  access control and retention rules with real data. None of these change the benchmark results.
+- **Remaining limits before shared deployment:** optional shared API keys provide no user identity or roles;
+  reads and Twin CORS remain open. Ports bind to localhost by default. Trace content may contain prompts and
+  answers and needs redaction, access control and retention rules for real data. Investigation records survive
+  restarts and tolerate damaged lines; corrupted decision logs still require recovery. These operational
+  improvements do not change the recorded benchmark results.
 
 ## Offline checks
 
@@ -159,7 +156,7 @@ against known outcomes or an appropriate engineering counter-check.
 
 Every push runs `.github/workflows/ci.yml`: `ruff check`, `ruff format --check`, the offline tests
 (`RAG_MODE=bm25`, mocked model clients), then a Docker smoke test that builds the image, starts Twin and
-Copilot with Compose and checks `/health` (Twin reachable, index ready). The paid `eval` job runs only on
+Copilot with Compose and checks `/health` (Twin reachable, index ready), `/health/ready` and `/health/live`. The paid `eval` job runs only on
 manual dispatch. Green CI proves that the software builds and its deterministic parts behave as tested;
 it does not prove a correct diagnosis (see the S05 case in the results).
 
@@ -178,8 +175,27 @@ curl -s localhost:8000/health
 ```
 
 Rollback: set `ECU_VERSION` to the previous tag and repeat pull and up; the data volume is kept.
-A Kubernetes deployment is future work. Its readiness probe would need to evaluate dependency
-readiness; the current `/health` endpoint returns HTTP 200 even when its dependency fields are false.
+A Kubernetes deployment is future work. It would use `/health/live` for liveness and `/health/ready`
+for readiness (503 when the Twin or index is unavailable). `/health` remains HTTP 200 for compatibility.
+
+## Hardening update · 22 October 2026
+
+The reviewed update adds restart-safe investigation records, separate liveness and readiness endpoints,
+localhost port bindings, optional API keys per service, explicit model timeouts and retries, and operational
+quality metrics with seven Prometheus alert rules. Retrieved passages carry visible prompt-injection
+warnings; these are screening hints, not proof of resistance to attacks.
+
+The benchmark scorer now handles multiple causes in the same scope. S02, S06 and S09 extend the synthetic
+scenarios. Re-scoring leaves run 4 unchanged (B0 12/12, V2 8/12 exact); B0 misses the sensor fault in S06
+when real heating occurs simultaneously. Whether the agent improves on that remains untested.
+
+The dependency audit and image scan are reporting checks with downloadable JSON artifacts, not security
+gates. Known findings and remaining work are recorded in [the roadmap](design/ROADMAP.md).
+
+Optional `ECU_API_KEY` protects questions and decisions; `TWIN_API_KEY` protects simulated faults and reset.
+Reads remain open. The dashboard keeps the two keys separately. The Docker healthcheck uses the compatible
+`/health` route; it sets container health status and does not itself restart containers. Model timeouts apply
+to individual calls, not the whole investigation.
 
 ## Layout
 

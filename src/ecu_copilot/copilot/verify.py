@@ -40,6 +40,7 @@ class ItemVerdict:
 class Verification:
     items: list[ItemVerdict] = field(default_factory=list)
     consistency: list[ConsistencyFlag] = field(default_factory=list)  # CONCEPT §11 - marks, never corrections
+    injection: list[dict] = field(default_factory=list)  # retrieved passages flagged by rag/injection.py (citation, patterns)
 
     def summary(self) -> dict:
         live = [i for i in self.items if i.source_type == "live"]
@@ -55,6 +56,7 @@ class Verification:
             "flags": [f"evidence {i.index + 1}: {i.provenance}" for i in self.items if i.provenance != "verified"],
             "items": [i.__dict__ for i in self.items],
             "consistency": summarize_consistency(self.consistency),
+            "injection": {"count": len(self.injection), "flagged": self.injection},
             "method": (
                 "provenance: ref vs tool outputs / doc index; support: spec comparison (live), keyword overlap (docs); "
                 "consistency: CONCEPT §11"
@@ -247,11 +249,28 @@ def support_live(ref: dict, statement: str, spec: dict | None) -> tuple[str, str
     return "not_checked", ""
 
 
+def flagged_passages(tool_calls: list) -> list[dict]:
+    """Citations of retrieved passages that rag/injection.py flagged in this run's search_docs outputs."""
+    out: list[dict] = []
+    for call in tool_calls or []:
+        if getattr(call, "name", "") != "search_docs":
+            continue
+        try:
+            hits = json.loads(getattr(call, "output", "") or "[]")
+        except (TypeError, ValueError):
+            continue
+        for h in hits if isinstance(hits, list) else []:
+            if isinstance(h, dict) and h.get("injection_flag"):
+                out.append({"citation": h.get("citation"), "patterns": h.get("injection_flag")})
+    return out
+
+
 def verify_report(report: dict | None, tool_calls: list, chunks: list, spec: dict | None) -> Verification:
     ver = Verification()
     if not report:
         return ver
     ver.consistency = check_consistency(report, tool_calls)
+    ver.injection = flagged_passages(tool_calls)
     for i, ev in enumerate(report.get("evidence") or []):
         ref = ev.get("ref") or {}
         st = ev.get("source_type")

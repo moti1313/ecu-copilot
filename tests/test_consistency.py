@@ -208,3 +208,24 @@ def test_k4_code_rule_and_lot_anywhere_in_groups():
     }
     second = ToolCall(name="cluster_failures", input={"station": None, "variant": "B", "by": "lot", "minutes": 30}, output=json.dumps(out))
     assert check_consistency(report, [second]) == []
+
+
+def test_k1_not_raised_when_current_follows_temperature_s06_pattern():
+    """Sensor suspected AND real heating: if describe_signal shows Iq following T1, the current path supports the
+    overtemperature independently, so K1 (not independently evidenced) must not fire; K3 stays as a hint."""
+    s06 = {
+        "assessments": [
+            _a(validity="invalid_temperature", defect="none_assessable", cause="station_temperature"),
+            _a(validity="unknown", defect="none", cause="sensor_t1"),
+        ]
+    }
+    assert codes(check_consistency(s06, [_describe("iq_follows_t1")])) == []  # no defect claim -> no K3 either
+    with_claim = {
+        "assessments": [
+            _a(validity="invalid_temperature", defect="none_assessable", cause="station_temperature"),
+            _a(validity="unknown", defect="suspected", cause="sensor_t1"),
+        ]
+    }
+    assert codes(check_consistency(with_claim, [_describe("iq_follows_t1")])) == ["K2", "K3"]
+    # decoupled signal still raises K1 (S05 pattern)
+    assert "K1" in codes(check_consistency(with_claim, [_describe("decoupled")]))

@@ -65,3 +65,22 @@ def test_cache_creation_tokens_are_exported():
 def test_label_values_are_escaped():
     text = prometheus_text([_rec(1.0, tools=('we"ird\\tool',))], {})
     assert 'tool="we\\"ird\\\\tool"' in text
+
+
+def test_quality_signals_and_their_exposition():
+    from types import SimpleNamespace
+
+    from ecu_copilot.copilot.agent import quality_signals
+
+    calls = [SimpleNamespace(output='{"error": "twin down"}'), SimpleNamespace(output='{"tested": 1}')]
+    ver = {"flags": ["evidence 2: not_found"], "consistency": {"flags": [{"code": "K1"}, {"code": "K3"}]}}
+    q = quality_signals(SimpleNamespace(tool_calls=calls, verification=ver))
+    assert q == {"tool_errors": 1, "consistency_flags": ["K1", "K3"], "provenance_unverified": 1, "injection_hits": 0}
+    rec = _rec(3.0)
+    rec.extra = q
+    text = prometheus_text([rec, _rec(2.0)], {})
+    assert "ecu_copilot_tool_errors_total 1" in text
+    assert 'ecu_copilot_consistency_flags_total{code="K1"} 1' in text and 'code="K3"} 1' in text
+    assert "ecu_copilot_questions_with_flags_total 1" in text and "ecu_copilot_provenance_unverified_total 1" in text
+    assert "ecu_copilot_injection_flags_total 0" in text
+    assert 'ecu_copilot_consistency_flags_total{code="none"} 0' in prometheus_text([_rec(1.0)], {})

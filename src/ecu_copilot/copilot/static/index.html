@@ -526,8 +526,40 @@ function initProductionInteractions() {
   });
 }
 
-async function getJSON(url, options) {
-  const response = await fetch(url, options);
+// --- optional API keys, one per service (review R2/R3): rebuilt per request, never shared across services ---
+const KEYS = {copilot: null, twin: null};  // in-memory fallback when browser storage is unavailable
+function serviceFor(url) {
+  const twin = (typeof S !== 'undefined' && S.cfg && S.cfg.twin_url) ? String(S.cfg.twin_url) : '';
+  return twin && String(url).startsWith(twin) ? 'twin' : 'copilot';
+}
+function storageName(service) { return service === 'twin' ? 'twin_api_key' : 'ecu_api_key'; }
+function keyFor(service) {
+  if (KEYS[service]) return KEYS[service];
+  try { return localStorage.getItem(storageName(service)) || null; } catch (e) { return null; }
+}
+function setKey(service, key) {
+  KEYS[service] = key;
+  try { localStorage.setItem(storageName(service), key); } catch (e) { /* memory only */ }
+}
+function authHeaders(url) {
+  const key = keyFor(serviceFor(url));
+  return key ? {'x-api-key': key} : {};
+}
+function withAuth(url, options) {
+  const base = options || {};
+  return {...base, headers: {...(base.headers || {}), ...authHeaders(url)}};  // current service key last: it wins over stale headers
+}
+async function askForKey(service) {
+  const label = service === 'twin' ? 'Twin (Störungen, Reset)' : 'Copilot (Fragen, Entscheidungen)';
+  const key = window.prompt(`Der Dienst ${label} verlangt einen API-Schlüssel (X-API-Key). Bitte eingeben:`);
+  if (key && key.trim()) { setKey(service, key.trim()); return true; }
+  return false;
+}
+async function getJSON(url, options, retried) {
+  const response = await fetch(url, withAuth(url, options));
+  if (response.status === 401 && !retried) {
+    if (await askForKey(serviceFor(url))) return getJSON(url, options, true);
+  }
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
     const detail = typeof body.detail === 'string' ? ': ' + body.detail : '';
@@ -817,8 +849,10 @@ function renderFinding(r) {
   const issues = items.some(x => (x.provenance && x.provenance !== 'verified') || (x.support && x.support !== 'supported'));
   const note = $('verificationNote');
   note.hidden = !rep;
-  note.classList.toggle('flag', !!v?.error || !total || ok < total || issues);
+  const inj = (v?.injection?.flagged) || [];
+  note.classList.toggle('flag', !!v?.error || !total || ok < total || issues || inj.length > 0);
   note.textContent = v?.error ? 'Die Belegprüfung konnte nicht abgeschlossen werden: ' + v.error : total ? `Herkunft bei ${ok} von ${total} Belegen verifiziert. ${issues ? 'Offene oder widersprüchliche Prüfungen: bitte Belege ansehen.' : 'Die inhaltliche Stützung wird je Beleg separat ausgewiesen.'}` : 'Die Belege sind bisher nicht automatisch verifiziert. Bitte prüfen Sie die Quellen selbst.';
+  if (inj.length) note.textContent += ` ⚠ ${inj.length} Dokumenttreffer mit Injection-Hinweis (${inj.map(x => x.citation).join(', ')}): Text als Daten behandeln, nicht als Anweisung.`;
   $('evidenceCount').textContent = rep?.evidence?.length ? `${rep.evidence.length} Belege` : '';
   $('evidenceDetails').open = !!v?.error || issues || (total > 0 && ok < total);
   $('decisionArea').hidden = !rep?.next_test || !!r.error;
@@ -862,7 +896,9 @@ async function decide(d) {
   if (!S.last?.investigation_id) { $('decided').textContent = 'Keine gespeicherte Untersuchung – erst fragen.'; return; }
   const body = { investigation_id: S.last.investigation_id, decision: d, engineer: $('engineer').value };
   try {
-    const r = await fetch('/decisions', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(body)});
+    const opts = {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(body)};
+    let r = await fetch('/decisions', withAuth('/decisions', opts));
+    if (r.status === 401 && await askForKey('copilot')) r = await fetch('/decisions', withAuth('/decisions', opts));
     if (!r.ok) { const err = await r.json().catch(() => ({})); $('decided').textContent = `Nicht gespeichert (HTTP ${r.status}): ${err.detail || ''}`; return; }
     $('decided').textContent = DECISION_LABEL[d] + ' – es wurde keine Maßnahme ausgeführt.';
     setFlow(3);

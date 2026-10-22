@@ -282,3 +282,56 @@ Protokoll: `data/evals/revision/revision-20261020-204629.jsonl` (je Fall: vollst
 **Was die Kontrollfälle zeigen.** Alle acht Bewertungslisten blieben byte-gleich; in zwei Fällen (S04 r2, S08 r0) wurde nur der Antworttext umformuliert. Die neutrale Rückmeldung hat also keine richtige Festlegung zerstört. Das ist der eine positive Befund dieses Versuchs und gilt nur für diese acht bekannten Fälle.
 
 **Einordnung.** Eine Rückmeldung, die den Widerspruch nennt, führt dazu, dass das Modell eine der beiden Festlegungen streicht, nicht dazu, dass es die Bedeutung der verbleibenden prüft. K2 stand in der Rückmeldung zwar in der Liste der Marken, aber nicht als Auftrag. Das ist zuerst ein Befund über die Rückmeldung, dann einer über das Modell. Eine Schleife wird deshalb **nicht** in den Agenten eingebaut. Falls weiterverfolgt: Rückmeldung je Marke mit der konkreten Frage (K2: „Prüfstandsursache oder Produktdefekt? Ein Sensorfehler der Station ist kein Bauteilverdacht ohne eigenen Beleg"), gleiche elf Fälle, gleiche Metriken, als eigener Versuch mit eigener Festlegung. Das wäre Stufe b2, nicht Stufe c. Auch ein dann positives Ergebnis bliebe ein Entwicklungsbefund auf bekannten Fällen.
+
+## 2026-10-21 21:55 UTC · Modell gpt-5 · max_tokens 24000 · Szenarien S02-acoustic-noise, S06-sensor-and-heat, S09-noise-and-lot · 3 Läufe (1 regulär, 2 explorativ) · eingefrorener Datenstand je Szenario
+
+**Reguläre Szenarien (Lösbarkeit erfüllt, nicht explorativ) – Gesamtquoten** (S09-noise-and-lot, 1 Läufe)
+
+| System | Abschluss | Befund korrekt | Bewertungen korrekt | Ursache | Zusatz-Behaupt. Ø | Bewertungen exakt | Zurückhaltung ok | Pflicht-Tools | Zitat vorh. | Herkunft live | Herkunft Dok | Stützung Dok | Nächster Test | Diagnose-Konsistenz | Ø s | Ø $ |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| B0 | 100 % | 100 % | 100 % | 100 % | 0.00 | 100 % | 100 % | 100 % | 100 % | 100 % (3/3) | 100 % (2/2) | 0 % (0/2) | 100 % | n/a | 0.0 | 0.000 |
+
+**Explorative Läufe (als explorativ markiert oder Lösbarkeit nicht erfüllt) – separat, nicht in der Gesamtquote** (S02-acoustic-noise, S06-sensor-and-heat, 2 Läufe)
+
+| System | Abschluss | Befund korrekt | Bewertungen korrekt | Ursache | Zusatz-Behaupt. Ø | Bewertungen exakt | Zurückhaltung ok | Pflicht-Tools | Zitat vorh. | Herkunft live | Herkunft Dok | Stützung Dok | Nächster Test | Diagnose-Konsistenz | Ø s | Ø $ |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| B0 | 100 % | 100 % | 50 % | 50 % | 0.00 | 50 % | 100 % | 100 % | 100 % | 100 % (4/4) | 100 % (2/2) | 0 % (0/2) | 100 % | n/a | 0.1 | 0.000 |
+
+Je Szenario: abgeschlossen / Befund korrekt / Bewertungen exakt (über Wiederholungen); (E) = explorativ:
+
+| Szenario | B0 |
+|---|---|
+| S02-acoustic-noise (E) | 1 / 1 / 1 von 1 |
+| S06-sensor-and-heat (E) | 1 / 1 / 0 von 1 |
+| S09-noise-and-lot | 1 / 1 / 1 von 1 |
+
+Lesehilfe: *regulär* = Lösbarkeit erfüllt und nicht explorativ; nur diese Läufe bilden die Gesamtquoten. *Abschluss* = auswertbarer Report ohne Fehler; *Diagnose-Konsistenz* = Mehrheitsanteil nur über abgeschlossene Läufe; *Zurückhaltung ok* = 'unklar' genau dann, wenn die Wahrheit es verlangt; *Herkunft live* n/a für Systeme ohne Referenzen (V1-Schema). *Herkunft* heißt: Die automatische Prüfung konnte die angegebene Quelle bzw. den referenzierten Wert nachvollziehen – nicht, dass die Aussage oder Diagnose richtig ist. *Stützung Dok* ist eine Schlüsselwort-Heuristik. *Zusatz-Behaupt.* = Bewertungen, die keiner Wahrheits-Gruppe entsprechen und eine Ursache behaupten; *Bewertungen exakt* = alle erwarteten gefunden und keine Zusatzbehauptung. B0 kennt die Szenario-Scope-Angabe (Station/Variante) aus der Szenariodefinition, nicht aus der Frage. *Pflicht-Tools* beschreibt die Werkzeugnutzung des Agenten (wurden die für das Szenario erwarteten Werkzeuge aufgerufen), nicht die Diagnosequalität; für B0, das direkt die Ingenieurfunktionen aufruft, ist die Quote strukturell bedingt (z. B. 75 %, weil S04 `get_station_stats` erwartet) und keine Aussage über seine Bewertungen.
+
+## 2026-10-21 22:08 UTC · Modell gpt-5 · max_tokens 24000 · Szenarien S02-acoustic-noise, S06-sensor-and-heat · 2 Läufe (2 regulär, 0 explorativ) · eingefrorener Datenstand je Szenario
+
+**Reguläre Szenarien (Lösbarkeit erfüllt, nicht explorativ) – Gesamtquoten** (S02-acoustic-noise, S06-sensor-and-heat, 2 Läufe)
+
+| System | Abschluss | Befund korrekt | Bewertungen korrekt | Ursache | Zusatz-Behaupt. Ø | Bewertungen exakt | Zurückhaltung ok | Pflicht-Tools | Zitat vorh. | Herkunft live | Herkunft Dok | Stützung Dok | Nächster Test | Diagnose-Konsistenz | Ø s | Ø $ |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| B0 | 100 % | 100 % | 50 % | 50 % | 0.00 | 50 % | 100 % | 100 % | 100 % | 100 % (4/4) | 100 % (2/2) | 0 % (0/2) | 100 % | n/a | 0.1 | 0.000 |
+
+Je Szenario: abgeschlossen / Befund korrekt / Bewertungen exakt (über Wiederholungen); (E) = explorativ:
+
+| Szenario | B0 |
+|---|---|
+| S02-acoustic-noise | 1 / 1 / 1 von 1 |
+| S06-sensor-and-heat | 1 / 1 / 0 von 1 |
+
+Lesehilfe: *regulär* = Lösbarkeit erfüllt und nicht explorativ; nur diese Läufe bilden die Gesamtquoten. *Abschluss* = auswertbarer Report ohne Fehler; *Diagnose-Konsistenz* = Mehrheitsanteil nur über abgeschlossene Läufe; *Zurückhaltung ok* = 'unklar' genau dann, wenn die Wahrheit es verlangt; *Herkunft live* n/a für Systeme ohne Referenzen (V1-Schema). *Herkunft* heißt: Die automatische Prüfung konnte die angegebene Quelle bzw. den referenzierten Wert nachvollziehen – nicht, dass die Aussage oder Diagnose richtig ist. *Stützung Dok* ist eine Schlüsselwort-Heuristik. *Zusatz-Behaupt.* = Bewertungen, die keiner Wahrheits-Gruppe entsprechen und eine Ursache behaupten; *Bewertungen exakt* = alle erwarteten gefunden und keine Zusatzbehauptung. B0 kennt die Szenario-Scope-Angabe (Station/Variante) aus der Szenariodefinition, nicht aus der Frage. *Pflicht-Tools* beschreibt die Werkzeugnutzung des Agenten (wurden die für das Szenario erwarteten Werkzeuge aufgerufen), nicht die Diagnosequalität; für B0, das direkt die Ingenieurfunktionen aufruft, ist die Quote strukturell bedingt (z. B. 75 %, weil S04 `get_station_stats` erwartet) und keine Aussage über seine Bewertungen.
+
+### Einordnung der B0-Validierung der neuen Szenarien (22.10.2026, kostenlos, keine Modellaufrufe)
+
+Zweck: prüfen, ob die drei neuen Szenarien S02 (Hallenlärm), S06 (Sensorfehler plus echte Erwärmung) und S09 (Lärm plus Los) lösbar sind und was das Regelwerk darauf leistet, **bevor** ein bezahlter Lauf mit V2 festgelegt wird. Zwei Läufe, je einmal B0, Archive `bench-20261021-215559` und `bench-20261021-220828`.
+
+| Szenario | Lösbarkeit | B0 exakt | Beobachtung |
+|---|---|---|---|
+| S02 Lärm | erster Lauf nach 150 s nicht erfüllt (78 % ungültig), nach Kalibrierung 240 s / 70 % erfüllt (83 %) | 1/1 | Umgebungsregel trägt auch für den Mikrofonpfad; ein Teil der E-310-Fehler ist Getriebe-Grundrate. |
+| S06 Sensor + Erwärmung | erster Lauf nach 240 s nicht erfüllt (5 Fehler), nach Kalibrierung 300 s erfüllt (10) | **1/2** | B0 bewertet nur die Temperatur. Die reale Erwärmung lässt den Ruhestrom mit T1 steigen, die Entkopplungssignatur, auf die die Sensorregel angewiesen ist, fehlt. Ein Muster ohne passende Regel: genau der Fall, für den ein Agent einen Zusatznutzen zeigen müsste. |
+| S09 Lärm + Los | erfüllt (14 E-310-Fehler, 100 % ungültig; Los L2439-07 24 Fehler, konzentriert) | 2/2 | Trennung Umgebung/Los hängt nicht an E-204. |
+
+Die Kalibrierung von Einschwingzeit und Mindestanteil ist in den Szenario-Dateien begründet und erfolgte **vor** jedem bezahlten Lauf; sie verändert kein bisheriges Ergebnis. Ein Lauf mit V2 auf S02/S06/S09 wäre ein eigener Versuch mit eigener Festlegung wie §10 und Freigabe; ohne ihn ist über den Agenten auf diesen Szenarien nichts gesagt. Die Vermutung aus S06 (Regelwerk blind, Agent könnte den Sensorfehler aus describe_signal und Text ableiten) ist eine Hypothese, kein Befund.

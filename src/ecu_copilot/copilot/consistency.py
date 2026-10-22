@@ -137,10 +137,16 @@ def check_consistency(report: dict | None, tool_calls: list) -> list[Consistency
                 flags.append(ConsistencyFlag("K0", KINDS["K0"], [i], TEXTS["K0"], coverage_note))
             # K1 compares assessments with each other and with stored signal output - independent of K0
             decoupled = [d for d in described if str(d.get("iq_t1_relation") or "") == "decoupled"]
+            coupled = [d for d in described if str(d.get("iq_t1_relation") or "") == "iq_follows_t1"]
             same_scope_sensor = [
                 j for j, b in enumerate(assessments) if j != i and _scope(b) == (st, var, lot) and b.get("root_cause") == "sensor_t1"
             ]
-            if decoupled or same_scope_sensor:
+            if coupled and not decoupled:
+                # The quiescent current follows the reported temperature: the current path independently supports
+                # real heating, so overtemperature IS evidenced even if the T1 sensor is also suspected (S06 pattern).
+                # K3 may still mark the pair as a hint; K1 would be a false conflict here.
+                pass
+            elif decoupled or same_scope_sensor:
                 why = []
                 if decoupled:
                     why.append(f"describe_signal: iq_t1_relation=decoupled (Korrelation {decoupled[0].get('iq_t1_correlation')})")

@@ -1,0 +1,83 @@
+{
+  "id": "S09-noise-and-lot",
+  "title": "Hallenlärm an Station 2 plus schlechtes Steckverbinder-Los bei Variante B – zwei Ursachen, anderer Umweltpfad als S08",
+  "question": "An Station 2 steigt die Ausfallrate bei Variante B deutlich, mit E-310 und E-120. Umgebung, Bauteil oder beides?",
+  "scope": {
+    "station": 2,
+    "variant": "B"
+  },
+  "setup": [
+    {
+      "type": "acoustic_noise",
+      "station": 2,
+      "noise_db": 57.0
+    },
+    {
+      "type": "bad_lot",
+      "variant": "B",
+      "lot": "L2439-07",
+      "fail_rate": 0.15
+    }
+  ],
+  "settle_s": 300,
+  "truth": {
+    "assessments": [
+      {
+        "scope": {
+          "station": 2,
+          "variant": "B"
+        },
+        "test_validity": "invalid_noise",
+        "defect_indication": "none_assessable",
+        "root_cause": "cell_noise"
+      },
+      {
+        "scope": {
+          "lot": "L2439-07"
+        },
+        "test_validity": "valid",
+        "defect_indication": "strong",
+        "root_cause": "connector_lot"
+      }
+    ],
+    "finding": "mixed",
+    "components_any": [
+      "J3",
+      "MIC",
+      "MOTOR"
+    ],
+    "required_tools": [
+      "check_validity",
+      "cluster_failures"
+    ],
+    "must_cite_any": [
+      "TS-DCU-EOL §6.1",
+      "TS-DCU-EOL 6.1",
+      "FMEA-DCU-B2 7",
+      "FMEA-DCU-B2 3"
+    ],
+    "next_test_keywords_any": [
+      "Los",
+      "lot",
+      "L2439-07",
+      "Lärm",
+      "Mikrofon",
+      "dB",
+      "Wiederhol"
+    ],
+    "block_units": true,
+    "abstain_expected": false
+  },
+  "solvability": {
+    "check": "validity_and_lot",
+    "station": 2,
+    "variant": "B",
+    "code": "E-310",
+    "min_invalid_share_pct": 80,
+    "min_failures": 8,
+    "lot_code": "E-120",
+    "lot": "L2439-07",
+    "min_lot_failures": 8
+  },
+  "note": "Wie S08, aber mit Lärm statt Temperatur als Umweltursache. Prüft, ob die Trennung von Umgebung und Los nicht an E-204 hängt."
+}

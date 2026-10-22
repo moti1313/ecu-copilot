@@ -17,6 +17,7 @@ duration, output) for the UI, the verifier and the evals; output guardrails.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import re
 import time
@@ -330,7 +331,11 @@ def summarize_tool_output(name: str, output: str) -> str:
     if isinstance(data, dict) and "error" in data:
         return f"Fehler: {data['error']}"
     if name == "search_docs" and isinstance(data, list):
-        return f"{len(data)} Treffer: " + ", ".join(h.get("citation", "?") for h in data[:5])
+        text = f"{len(data)} Treffer: " + ", ".join(h.get("citation", "?") for h in data[:5])
+        flagged = [h.get("citation", "?") for h in data if isinstance(h, dict) and h.get("injection_flag")]
+        if flagged:
+            text += " · ⚠ Injection-Hinweis: " + ", ".join(flagged)
+        return text
     if name == "get_station_stats" and isinstance(data, dict):
         groups = data.get("groups", [])
         parts = [f"EOL-{g['station']}/{g['variant']} {g['failure_rate_pct']} %" for g in groups]
@@ -362,6 +367,22 @@ def summarize_tool_output(name: str, output: str) -> str:
     if name == "describe_signal" and isinstance(data, dict):
         return f"{data.get('iq_t1_relation')} · " + ("; ".join(data.get("flags", [])[:2]) or "keine Auffälligkeit")
     return str(output)[:120]
+
+
+def quality_signals(result) -> dict:
+    """Per-question operational quality signals for the metrics log and Prometheus: tool calls that returned an
+    error, consistency marks (CONCEPT §11) and evidence whose provenance did not verify. Operational, not a
+    statement about diagnostic correctness."""
+    tool_errors = sum(1 for c in result.tool_calls if str(getattr(c, "output", "") or "").lstrip().startswith('{"error"'))
+    ver = result.verification or {}
+    flags = [f.get("code") for f in ((ver.get("consistency") or {}).get("flags") or []) if f.get("code")]
+    unverified = len(ver.get("flags") or [])
+    injection_hits = 0
+    for c in result.tool_calls:
+        if getattr(c, "name", "") == "search_docs":
+            with contextlib.suppress(TypeError, ValueError):
+                injection_hits += sum(1 for h in json.loads(c.output or "[]") if isinstance(h, dict) and h.get("injection_flag"))
+    return {"tool_errors": tool_errors, "consistency_flags": flags, "provenance_unverified": unverified, "injection_hits": injection_hits}
 
 
 def derive_finding(report: dict) -> str:
@@ -499,6 +520,7 @@ class Copilot:
                     citation_missing=result.citation_missing,
                     error=result.error,
                     trace_id=result.trace_id,
+                    extra=quality_signals(result),
                 )
             )
         return result
@@ -508,7 +530,7 @@ class Copilot:
         if self.client is None:
             import anthropic
 
-            self.client = anthropic.Anthropic()
+            self.client = anthropic.Anthropic(timeout=config.MODEL_TIMEOUT_S, max_retries=config.MODEL_MAX_RETRIES)
         return self.client
 
     def _run(self, messages: list[dict], result: AskResult, usage: Usage) -> None:
@@ -572,7 +594,7 @@ class OpenAICopilot(Copilot):
         if self.client is None:
             import openai
 
-            self.client = openai.OpenAI()
+            self.client = openai.OpenAI(timeout=config.MODEL_TIMEOUT_S, max_retries=config.MODEL_MAX_RETRIES)
         return self.client
 
     def _tool_specs(self) -> list[dict]:
@@ -664,5 +686,8 @@ def make_copilot(
         return OpenAICopilot(metrics=metrics, profile=profile, model=model)
     import anthropic
 
-    client = anthropic.Anthropic(open_telemetry={"tracer_provider": tracer_provider}) if tracer_provider else anthropic.Anthropic()
+    kw = {"timeout": config.MODEL_TIMEOUT_S, "max_retries": config.MODEL_MAX_RETRIES}
+    client = (
+        anthropic.Anthropic(open_telemetry={"tracer_provider": tracer_provider}, **kw) if tracer_provider else anthropic.Anthropic(**kw)
+    )
     return Copilot(client=client, metrics=metrics, profile=profile, model=model)

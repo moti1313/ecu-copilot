@@ -1,9 +1,11 @@
+# Host ports bind to 127.0.0.1 by default (local demo). For access from other machines set BIND_ADDRESS=0.0.0.0
+# deliberately - the APIs have no authentication unless ECU_API_KEY / TWIN_API_KEY are set.
 services:
   jaeger:
     image: jaegertracing/all-in-one:1.62.0
     ports:
-      - "16686:16686"   # UI
-      - "4318:4318"     # OTLP/HTTP in
+      - "${BIND_ADDRESS:-127.0.0.1}:16686:16686"   # UI
+      - "${BIND_ADDRESS:-127.0.0.1}:4318:4318"     # OTLP/HTTP in
     environment:
       COLLECTOR_OTLP_ENABLED: "true"
 
@@ -13,9 +15,10 @@ services:
     environment:
       PORT: "8001"
       TWIN_INTERVAL_S: "1.5"
+      TWIN_API_KEY: ${TWIN_API_KEY:-}   # optional: protects fault injection and reset
       TWIN_SEED_MINUTES: "30"
     ports:
-      - "8001:8001"
+      - "${BIND_ADDRESS:-127.0.0.1}:8001:8001"
 
   copilot:
     build: .
@@ -26,6 +29,8 @@ services:
       LLM_PROVIDER: ${LLM_PROVIDER:-anthropic}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}   # from .env; without a key the service starts but /ask returns an auth error
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ECU_API_KEY: ${ECU_API_KEY:-}     # optional: protects /ask and /decisions (header X-API-Key)
+      TWIN_API_KEY: ${TWIN_API_KEY:-}   # must match the twin's key when set
       AGENT_MODEL: ${AGENT_MODEL:-}
       JUDGE_MODEL: ${JUDGE_MODEL:-}
       TWIN_URL: http://twin:8001
@@ -37,7 +42,7 @@ services:
     volumes:
       - copilot-data:/data   # embedding model cache, chroma index, metrics, 8D reports
     ports:
-      - "8000:8000"
+      - "${BIND_ADDRESS:-127.0.0.1}:8000:8000"
 
 volumes:
   copilot-data:

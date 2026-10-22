@@ -158,6 +158,39 @@ def prometheus_text(records: list[QuestionRecord], health: dict | None = None) -
         [(f'{{tool="{_label(t)}"}}', n) for t, n in sorted(tools.items())],
     )
 
+    extras = [r.extra or {} for r in rs]
+    metric(
+        "ecu_copilot_tool_errors_total",
+        "counter",
+        "Tool calls that returned an error object",
+        [("", sum(int(e.get("tool_errors", 0) or 0) for e in extras))],
+    )
+    flag_counts = Counter(code for e in extras for code in (e.get("consistency_flags") or []))
+    metric(
+        "ecu_copilot_consistency_flags_total",
+        "counter",
+        "Consistency marks (CONCEPT §11) by code; a low number is not proof of a correct diagnosis",
+        [(f'{{code="{_label(c)}"}}', n) for c, n in sorted(flag_counts.items())] or [('{code="none"}', 0)],
+    )
+    metric(
+        "ecu_copilot_questions_with_flags_total",
+        "counter",
+        "Questions that carried at least one consistency mark",
+        [("", sum(1 for e in extras if e.get("consistency_flags")))],
+    )
+    metric(
+        "ecu_copilot_provenance_unverified_total",
+        "counter",
+        "Evidence items whose provenance did not verify",
+        [("", sum(int(e.get("provenance_unverified", 0) or 0) for e in extras))],
+    )
+    metric(
+        "ecu_copilot_injection_flags_total",
+        "counter",
+        "Retrieved document passages flagged by the prompt-injection screen",
+        [("", sum(int(e.get("injection_hits", 0) or 0) for e in extras))],
+    )
+
     lat = sorted(r.latency_s for r in rs)
     lines.append("# HELP ecu_copilot_latency_seconds Answer latency per question")
     lines.append("# TYPE ecu_copilot_latency_seconds histogram")

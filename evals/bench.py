@@ -156,16 +156,30 @@ def score(sc: dict, r, chunks, spec) -> dict:
     truth = sc["truth"]
     rep = r.report or {}
     assessments = rep.get("assessments") or []
-    matched = 0
+    matched, used = 0, set()
+    # Each expected assessment is matched to at most ONE answer assessment and each answer assessment is used at
+    # most once. Preference: full triple match in the same scope, else same scope and root cause, else any same
+    # scope. Needed since S06 expects two different causes in the identical scope (review R1, 22.10.).
     for ta in truth["assessments"]:
-        hit = next((a for a in assessments if _scope_match(ta["scope"], a.get("scope"))), None)
-        if (
-            hit
-            and hit.get("test_validity") == ta["test_validity"]
-            and hit.get("defect_indication") == ta["defect_indication"]
-            and hit.get("root_cause") == ta["root_cause"]
-        ):
-            matched += 1
+        in_scope = [i for i, a in enumerate(assessments) if i not in used and _scope_match(ta["scope"], a.get("scope"))]
+
+        def _full(i, ta=ta):
+            a = assessments[i]
+            return (
+                a.get("test_validity") == ta["test_validity"]
+                and a.get("defect_indication") == ta["defect_indication"]
+                and a.get("root_cause") == ta["root_cause"]
+            )
+
+        pick = next((i for i in in_scope if _full(i)), None)
+        if pick is None:
+            pick = next((i for i in in_scope if assessments[i].get("root_cause") == ta["root_cause"]), None)
+        # no third fallback: an unrelated same-scope row must not be consumed for this expectation, otherwise a
+        # later expectation that it actually answers would find nothing left (review round 2, "nur Sensor" 0/2)
+        if pick is not None:
+            used.add(pick)
+            if _full(pick):
+                matched += 1
     n_truth = len(truth["assessments"])
     # extra claims: assessments that match no truth entry and assert a cause (a plain "valid / none / none"
     # for an unaffected group is not a claim) - reviewer request after run 2

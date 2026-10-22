@@ -32,6 +32,12 @@ AGENT_EFFORT = os.environ.get("AGENT_EFFORT") or "medium"  # low | medium | high
 AGENT_PROFILE = os.environ.get("AGENT_PROFILE") or "v2"  # v1 = original five tools + single finding; v2 = engineering tools + assessments
 AGENT_MAX_TOKENS = int(os.environ.get("AGENT_MAX_TOKENS", "24000"))  # OpenAI counts reasoning tokens here; 8000 truncated every V2 report
 PROMPT_VERSION = "2026-10-16.3"  # bump when the system prompt changes; logged with every answer
+# Optional access control (local demo: off). When set, POST /ask and POST /decisions (copilot) and the fault/reset
+# endpoints (twin) require the header X-API-Key. Reads stay open. Not a substitute for an identity provider.
+ECU_API_KEY = os.environ.get("ECU_API_KEY", "")
+TWIN_API_KEY = os.environ.get("TWIN_API_KEY", "")
+MODEL_TIMEOUT_S = float(os.environ.get("MODEL_TIMEOUT_S", "300"))  # per model call; the SDK default of 600 s hides hung calls
+MODEL_MAX_RETRIES = int(os.environ.get("MODEL_MAX_RETRIES", "1"))  # SDK retries on 429/5xx; 1 instead of the silent default 2
 
 # USD per 1M tokens: (input, output, cache_write, cache_read). Used for the cost log only.
 PRICING = {
