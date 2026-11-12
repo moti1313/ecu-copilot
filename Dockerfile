@@ -1,7 +1,7 @@
 # One image for both services; docker-compose picks the command.
 # Multi-stage: dependencies are resolved from uv.lock (reproducible), project code is copied last
 # so a code change does not re-install packages.
-FROM python:3.12-slim AS base
+FROM python:3.15-slim AS base
 COPY --from=ghcr.io/astral-sh/uv:0.13.1 /uv /uvx /bin/
 ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy UV_PYTHON_DOWNLOADS=never
 WORKDIR /app
